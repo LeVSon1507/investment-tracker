@@ -1,6 +1,12 @@
 import { type ReactElement, useState, useRef, useEffect, useCallback } from 'react';
 import { Button, Input, message } from 'antd';
-import { SendOutlined, ClearOutlined, CheckCircleFilled, SettingOutlined } from '@ant-design/icons';
+import {
+  SendOutlined,
+  ClearOutlined,
+  CheckCircleFilled,
+  SettingOutlined,
+  SwapOutlined,
+} from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
@@ -9,20 +15,63 @@ import { useCategories } from '../../hooks/useCategories';
 import { useInvestments } from '../../hooks/useInvestments';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { formatCurrency } from '../../utils/formatCurrency';
-import type { ChatMessage, ParsedInvestmentResult } from '../../types/investment';
+import type { ChatMessage, ParsedInvestmentResult, InvestmentCategory, InvestmentWithCategory } from '../../types/investment';
+import type { CategoryUpdateCommand } from '../../lib/gemini';
 import styles from './Chat.module.css';
+
+async function applyCategoryReassignments(
+  updates: CategoryUpdateCommand[],
+  categoryList: InvestmentCategory[],
+  investmentList: InvestmentWithCategory[],
+  updateFn: (id: string, payload: { investmentName: string; categoryId: string; amount: number }) => Promise<void>,
+): Promise<void> {
+  for (const categoryUpdate of updates) {
+    if (categoryUpdate.type !== 'reassign' || !categoryUpdate.investmentNames) continue;
+
+    const targetCategory = categoryList.find(
+      (category) => category.category_name.toLowerCase() === categoryUpdate.toCategory.toLowerCase(),
+    );
+
+    if (!targetCategory) continue;
+
+    for (const investmentName of categoryUpdate.investmentNames) {
+      const matchingInvestment = investmentList.find(
+        (item) =>
+          item.investment_name.toLowerCase().includes(investmentName.toLowerCase()) ||
+          investmentName.toLowerCase().includes(item.investment_name.toLowerCase()),
+      );
+
+      if (matchingInvestment) {
+        await updateFn(matchingInvestment.id, {
+          investmentName: matchingInvestment.investment_name,
+          categoryId: targetCategory.id,
+          amount: matchingInvestment.amount,
+        });
+      }
+    }
+  }
+}
 
 function ChatPage(): ReactElement {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { messages, isParsing, sendMessage, confirmParsedInvestments, clearMessages } =
-    useAiParser();
-  const { categories } = useCategories();
-  const { createInvestment } = useInvestments();
+  const {
+    messages,
+    isParsing,
+    sendMessage,
+    confirmParsedInvestments,
+    clearMessages,
+    categoryUpdates,
+    clearCategoryUpdates,
+  } = useAiParser();
+  const { categories, refetch: refetchCategories } = useCategories();
+  const { createInvestment, investments, updateInvestment } = useInvestments();
   const currency = useSettingsStore((state) => state.currency);
   const getEffectiveApiKey = useSettingsStore((state) => state.getEffectiveApiKey);
 
   const [inputText, setInputText] = useState('');
+  const [savingMessageId, setSavingMessageId] = useState<string | null>(null);
+  const [isApplyingCategoryUpdate, setIsApplyingCategoryUpdate] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const hasApiKey = getEffectiveApiKey().length > 0;
@@ -52,7 +101,10 @@ function ChatPage(): ReactElement {
 
   const handleConfirmSave = useCallback(
     async (chatMessageItem: ChatMessage): Promise<void> => {
-      if (!chatMessageItem.parsedInvestments) return;
+      if (!chatMessageItem.parsedInvestments || chatMessageItem.isConfirmed) return;
+      if (savingMessageId === chatMessageItem.id) return;
+
+      setSavingMessageId(chatMessageItem.id);
 
       try {
         for (const parsed of chatMessageItem.parsedInvestments) {
@@ -77,10 +129,39 @@ function ChatPage(): ReactElement {
         if (error instanceof Error) {
           message.error(error.message);
         }
+      } finally {
+        setSavingMessageId(null);
       }
     },
-    [categories, createInvestment, confirmParsedInvestments, t],
+    [categories, createInvestment, confirmParsedInvestments, t, savingMessageId],
   );
+
+  // Handle AI-initiated category updates (reassign investments to correct categories)
+  const handleApplyCategoryUpdates = useCallback(async (): Promise<void> => {
+    if (!categoryUpdates || isApplyingCategoryUpdate) return;
+
+    setIsApplyingCategoryUpdate(true);
+
+    try {
+      await applyCategoryReassignments(categoryUpdates, categories, investments, updateInvestment);
+      await refetchCategories();
+      clearCategoryUpdates();
+      message.success('Đã cập nhật danh mục thành công!');
+    } catch (error) {
+      if (error instanceof Error) {
+        message.error(error.message);
+      }
+    } finally {
+      setIsApplyingCategoryUpdate(false);
+    }
+  }, [categoryUpdates, categories, investments, updateInvestment, refetchCategories, clearCategoryUpdates, isApplyingCategoryUpdate]);
+
+  // Auto-trigger category update when AI suggests it
+  useEffect(() => {
+    if (categoryUpdates && categoryUpdates.length > 0) {
+      // Don't auto-apply, show the button in the UI
+    }
+  }, [categoryUpdates]);
 
   const hasMessages = messages.length > 0;
 
@@ -108,6 +189,26 @@ function ChatPage(): ReactElement {
         </div>
       )}
 
+      {/* Category update banner */}
+      {categoryUpdates && categoryUpdates.length > 0 && (
+        <div className={styles.categoryUpdateBanner}>
+          <span>
+            🔄 AI đề xuất chuyển danh mục cho {categoryUpdates.reduce(
+              (total, update) => total + (update.investmentNames?.length ?? 0), 0
+            )} khoản đầu tư
+          </span>
+          <Button
+            type="primary"
+            size="small"
+            icon={<SwapOutlined />}
+            onClick={handleApplyCategoryUpdates}
+            loading={isApplyingCategoryUpdate}
+          >
+            Áp dụng
+          </Button>
+        </div>
+      )}
+
       <div className={styles.chatMessages}>
         {!hasMessages && (
           <div className={styles.welcomeMessage}>
@@ -123,6 +224,7 @@ function ChatPage(): ReactElement {
             chatMessage={chatMessageItem}
             onConfirm={handleConfirmSave}
             currency={currency}
+            isSaving={savingMessageId === chatMessageItem.id}
           />
         ))}
 
@@ -165,12 +267,13 @@ function ChatPage(): ReactElement {
 }
 
 type MessageBubbleProps = {
-  chatMessage: ChatMessage;
-  onConfirm: (message: ChatMessage) => void;
-  currency: 'VND' | 'USD';
+  readonly chatMessage: ChatMessage;
+  readonly onConfirm: (message: ChatMessage) => void;
+  readonly currency: 'VND' | 'USD';
+  readonly isSaving: boolean;
 };
 
-function MessageBubble({ chatMessage, onConfirm, currency }: MessageBubbleProps): ReactElement {
+function MessageBubble({ chatMessage, onConfirm, currency, isSaving }: MessageBubbleProps): ReactElement {
   const { t } = useTranslation();
   const isUser = chatMessage.role === 'user';
 
@@ -186,13 +289,14 @@ function MessageBubble({ chatMessage, onConfirm, currency }: MessageBubbleProps)
     chatMessage.parsedInvestments && chatMessage.parsedInvestments.length > 0;
   const isNoResult = chatMessage.content === 'ai_no_results';
   const isFoundInvestments = chatMessage.content === 'ai_found_investments';
+  const isGeneralMessage = !isNoResult && !isFoundInvestments;
 
   return (
     <div className={styles.messageRowAssistant}>
       <div className={styles.messageBubbleAssistant}>
         {isFoundInvestments && <p>{t('chat.aiResponse')}</p>}
         {isNoResult && <p>{t('chat.noResult')}</p>}
-        {!isFoundInvestments && !isNoResult && <p>{chatMessage.content}</p>}
+        {isGeneralMessage && <p>{chatMessage.content}</p>}
 
         {hasParsedData && (
           <div className={styles.parsedPreview}>
@@ -220,10 +324,12 @@ function MessageBubble({ chatMessage, onConfirm, currency }: MessageBubbleProps)
                   type="primary"
                   size="small"
                   onClick={() => onConfirm(chatMessage)}
+                  loading={isSaving}
+                  disabled={isSaving}
                 >
                   {t('chat.confirm')}
                 </Button>
-                <Button size="small">{t('chat.cancel')}</Button>
+                <Button size="small" disabled={isSaving}>{t('chat.cancel')}</Button>
               </div>
             )}
           </div>

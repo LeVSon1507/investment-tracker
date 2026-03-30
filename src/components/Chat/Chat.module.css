@@ -220,6 +220,21 @@
   color: var(--warning);
 }
 
+.categoryUpdateBanner {
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: rgba(99, 102, 241, 0.1);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+  font-size: 13px;
+  color: var(--text-primary);
+  animation: fadeInUp 0.3s ease-out;
+}
+
 @media (max-width: 768px) {
   .chatContainer {
     height: calc(100vh - 140px);
