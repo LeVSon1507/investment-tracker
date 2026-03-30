@@ -1,0 +1,80 @@
+.settingsContainer {
+  max-width: 640px;
+  animation: fadeInUp 0.5s ease-out;
+}
+
+.settingsTitle {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-lg);
+}
+
+.settingsCard {
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-lg);
+}
+
+.settingsCardTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-md);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.fieldHint {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.saveButton {
+  height: 40px !important;
+  border-radius: var(--radius-md) !important;
+  font-weight: 500 !important;
+  background: var(--accent-gradient) !important;
+  border: none !important;
+}
+
+.categoryList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-md);
+}
+
+.categoryRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+}
+
+.categoryRowLeft {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.categoryColorIndicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.categoryRowName {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.categoryRowTarget {
+  font-size: 12px;
+  color: var(--text-muted);
+}

@@ -1,0 +1,191 @@
+.layoutContainer {
+  height: 100vh;
+  overflow: hidden;
+}
+
+.sidebar {
+  background: var(--bg-secondary) !important;
+  border-right: 1px solid var(--border-subtle);
+  overflow-y: auto;
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 100;
+}
+
+.sidebarInner {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: var(--spacing-md) 0;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md) var(--spacing-lg);
+  margin-bottom: var(--spacing-lg);
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.logo:hover {
+  opacity: 0.8;
+}
+
+.logoIcon {
+  width: 36px;
+  height: 36px;
+  background: var(--accent-gradient);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 700;
+  color: white;
+  flex-shrink: 0;
+}
+
+.logoText {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.navMenu {
+  flex: 1;
+  border: none !important;
+  background: transparent !important;
+}
+
+.navMenu .ant-menu-item {
+  margin: 2px var(--spacing-sm) !important;
+  border-radius: var(--radius-md) !important;
+  height: 44px !important;
+  line-height: 44px !important;
+  color: var(--text-secondary) !important;
+  transition: all 0.25s ease !important;
+}
+
+.navMenu .ant-menu-item:hover {
+  color: var(--text-primary) !important;
+  background: var(--bg-glass-hover) !important;
+}
+
+.navMenu .ant-menu-item-selected {
+  background: rgba(99, 102, 241, 0.15) !important;
+  color: var(--accent-primary) !important;
+}
+
+.navMenu .ant-menu-item-selected::after {
+  display: none !important;
+}
+
+.userSection {
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.userInfo {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--spacing-sm);
+}
+
+.userAvatar {
+  flex-shrink: 0;
+}
+
+.userName {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.userEmail {
+  font-size: 11px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.logoutButton {
+  width: 100%;
+  border: 1px solid var(--border-subtle) !important;
+  background: transparent !important;
+  color: var(--text-secondary) !important;
+  border-radius: var(--radius-md) !important;
+}
+
+.logoutButton:hover {
+  color: var(--danger) !important;
+  border-color: var(--danger) !important;
+}
+
+.contentArea {
+  margin-left: var(--sidebar-width);
+  height: 100vh;
+  overflow-y: auto;
+  padding: var(--spacing-xl);
+  transition: margin-left 0.3s ease;
+}
+
+.contentAreaCollapsed {
+  margin-left: var(--sidebar-collapsed-width);
+}
+
+.salaryBanner {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(99, 102, 241, 0.15) 100%);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-md) var(--spacing-lg);
+  margin-bottom: var(--spacing-lg);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  animation: fadeInUp 0.5s ease-out;
+}
+
+.salaryBannerText {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.salaryBannerTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--warning);
+}
+
+.salaryBannerMessage {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.salaryBannerActions {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    display: none;
+  }
+
+  .contentArea {
+    margin-left: 0;
+    padding: var(--spacing-md);
+  }
+}

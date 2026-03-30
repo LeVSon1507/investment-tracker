@@ -1,0 +1,102 @@
+.investmentHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-lg);
+}
+
+.investmentTitle {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.addButton {
+  height: 40px !important;
+  border-radius: var(--radius-md) !important;
+  font-weight: 500 !important;
+  background: var(--accent-gradient) !important;
+  border: none !important;
+}
+
+.addButton:hover {
+  background: var(--accent-gradient-hover) !important;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-glow) !important;
+}
+
+.tableCard {
+  padding: var(--spacing-lg);
+  animation: fadeInUp 0.5s ease-out;
+}
+
+.categoryTag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: 2px 10px;
+  border-radius: var(--radius-full);
+  font-size: 13px;
+  font-weight: 500;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.amountText {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--success);
+  font-variant-numeric: tabular-nums;
+}
+
+.actionButtons {
+  display: flex;
+  gap: var(--spacing-xs);
+}
+
+.editBtn {
+  color: var(--accent-primary) !important;
+}
+
+.deleteBtn {
+  color: var(--danger) !important;
+}
+
+.formModal {
+  top: 60px;
+}
+
+.formDivider {
+  margin: var(--spacing-md) 0 !important;
+  border-color: var(--border-subtle) !important;
+}
+
+.categoryManageButton {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  transition: all 0.2s ease;
+}
+
+.categoryManageButton:hover {
+  color: var(--accent-primary);
+  background: var(--bg-glass-hover);
+}
+
+.categoryOption {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.categoryColorDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}

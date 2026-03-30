@@ -1,0 +1,158 @@
+.loginContainer {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-primary);
+  position: relative;
+  overflow: hidden;
+}
+
+.loginContainer::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(
+    circle at 30% 40%,
+    rgba(99, 102, 241, 0.08) 0%,
+    transparent 50%
+  ),
+  radial-gradient(
+    circle at 70% 60%,
+    rgba(139, 92, 246, 0.06) 0%,
+    transparent 50%
+  );
+  animation: pulse 8s ease-in-out infinite;
+}
+
+.loginCard {
+  width: 100%;
+  max-width: 420px;
+  padding: var(--spacing-2xl);
+  background: var(--bg-glass);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  position: relative;
+  z-index: 1;
+  animation: fadeInUp 0.6s ease-out;
+}
+
+.loginHeader {
+  text-align: center;
+  margin-bottom: var(--spacing-xl);
+}
+
+.loginLogo {
+  width: 56px;
+  height: 56px;
+  background: var(--accent-gradient);
+  border-radius: var(--radius-lg);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: 800;
+  color: white;
+  margin-bottom: var(--spacing-md);
+}
+
+.loginTitle {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-xs);
+}
+
+.loginSubtitle {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.googleButton {
+  width: 100%;
+  height: 44px !important;
+  border-radius: var(--radius-md) !important;
+  font-weight: 500 !important;
+  font-size: 14px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: var(--spacing-sm) !important;
+  background: white !important;
+  color: #1f2937 !important;
+  border: 1px solid #e5e7eb !important;
+  transition: all 0.2s ease !important;
+}
+
+.googleButton:hover {
+  background: #f9fafb !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+.googleIcon {
+  font-size: 18px;
+}
+
+.divider {
+  margin: var(--spacing-lg) 0 !important;
+  border-color: var(--border-subtle) !important;
+}
+
+.divider .ant-divider-inner-text {
+  color: var(--text-muted) !important;
+  font-size: 12px !important;
+}
+
+.formInput {
+  height: 44px !important;
+  border-radius: var(--radius-md) !important;
+  background: var(--bg-secondary) !important;
+  border-color: var(--border-subtle) !important;
+  color: var(--text-primary) !important;
+}
+
+.formInput:hover,
+.formInput:focus {
+  border-color: var(--accent-primary) !important;
+}
+
+.submitButton {
+  width: 100%;
+  height: 44px !important;
+  border-radius: var(--radius-md) !important;
+  font-weight: 600 !important;
+  font-size: 15px !important;
+  background: var(--accent-gradient) !important;
+  border: none !important;
+}
+
+.submitButton:hover {
+  background: var(--accent-gradient-hover) !important;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-glow) !important;
+}
+
+.switchAuth {
+  text-align: center;
+  margin-top: var(--spacing-lg);
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.switchAuthLink {
+  color: var(--accent-primary);
+  cursor: pointer;
+  font-weight: 500;
+  margin-left: var(--spacing-xs);
+  transition: color 0.2s ease;
+}
+
+.switchAuthLink:hover {
+  color: var(--accent-secondary);
+}
