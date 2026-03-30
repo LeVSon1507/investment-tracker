@@ -3,6 +3,8 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: var(--spacing-lg);
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
 }
 
 .investmentTitle {
@@ -28,6 +30,7 @@
 .tableCard {
   padding: var(--spacing-lg);
   animation: fadeInUp 0.5s ease-out;
+  overflow-x: auto;
 }
 
 .categoryTag {
@@ -99,4 +102,112 @@
   height: 10px;
   border-radius: 50%;
   flex-shrink: 0;
+}
+
+/* Mobile card layout for investments */
+.mobileCardList {
+  display: none;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.mobileCard {
+  background: var(--bg-glass);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  transition: all 0.2s ease;
+}
+
+.mobileCard:hover {
+  border-color: var(--border-active);
+}
+
+.mobileCardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--spacing-sm);
+}
+
+.mobileCardName {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  flex: 1;
+  margin-right: var(--spacing-sm);
+}
+
+.mobileCardAmount {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--success);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.mobileCardMeta {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
+}
+
+.mobileCardCategory {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: 2px 10px;
+  border-radius: var(--radius-full);
+  font-size: 12px;
+  font-weight: 500;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.mobileCardDate {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.mobileCardNote {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: var(--spacing-xs);
+}
+
+.mobileCardActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-xs);
+  margin-top: var(--spacing-sm);
+  border-top: 1px solid var(--border-subtle);
+  padding-top: var(--spacing-sm);
+}
+
+/* Desktop table visible, mobile cards hidden */
+.desktopTable {
+  display: block;
+}
+
+@media (max-width: 768px) {
+  .investmentTitle {
+    font-size: 22px;
+  }
+
+  .tableCard {
+    padding: var(--spacing-sm);
+  }
+
+  .desktopTable {
+    display: none;
+  }
+
+  .mobileCardList {
+    display: flex;
+  }
+
+  .formModal {
+    top: 20px;
+  }
 }

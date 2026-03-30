@@ -38,7 +38,7 @@ export const useSettingsStore = create<SettingsState>()(
       language: 'vi',
       salaryDay: 25,
       geminiApiKey: '',
-      geminiModel: 'gemini-2.0-flash',
+      geminiModel: 'gemini-2.5-flash-lite',
       isFallbackUnlocked: false,
       lastSalaryReminderDismissed: null,
 

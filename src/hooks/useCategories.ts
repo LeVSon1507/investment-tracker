@@ -12,12 +12,15 @@ type UseCategoriesReturn = {
 };
 
 const DEFAULT_CATEGORIES: Omit<CategoryInput, 'targetAmount'>[] = [
-  { categoryName: 'Cổ phiếu', icon: '📈', color: '#6366f1' },
+  { categoryName: 'Hũ MoMo', icon: '🟣', color: '#a855f7' },
+  { categoryName: 'Sổ tiết kiệm', icon: '📒', color: '#06b6d4' },
+  { categoryName: 'Tiền ngân hàng', icon: '🏦', color: '#3b82f6' },
+  { categoryName: 'Chứng khoán', icon: '📈', color: '#6366f1' },
+  { categoryName: 'Chứng chỉ quỹ', icon: '📊', color: '#8b5cf6' },
+  { categoryName: 'Vàng', icon: '🥇', color: '#eab308' },
   { categoryName: 'Crypto', icon: '₿', color: '#f59e0b' },
   { categoryName: 'Bất động sản', icon: '🏠', color: '#10b981' },
-  { categoryName: 'Vàng', icon: '🥇', color: '#eab308' },
-  { categoryName: 'Tiết kiệm', icon: '🏦', color: '#06b6d4' },
-  { categoryName: 'Quỹ đầu tư', icon: '📊', color: '#8b5cf6' },
+  { categoryName: 'Tiền mặt', icon: '💵', color: '#22c55e' },
   { categoryName: 'Khác', icon: '💰', color: '#64748b' },
 ];
 
@@ -41,8 +44,32 @@ export function useCategories(): UseCategoriesReturn {
   }, []);
 
   useEffect(() => {
-    fetchCategories();
-  }, [fetchCategories]);
+    let isStale = false;
+
+    async function loadInitialCategories(): Promise<void> {
+      const { data, error } = await supabase
+        .from('investment_categories')
+        .select('*')
+        .order('created_at', { ascending: true });
+
+      if (isStale) return;
+
+      if (error) {
+        console.error('Failed to fetch categories:', error.message);
+        setIsLoading(false);
+        return;
+      }
+
+      setCategories(data ?? []);
+      setIsLoading(false);
+    }
+
+    loadInitialCategories();
+
+    return () => {
+      isStale = true;
+    };
+  }, []);
 
   const createCategory = useCallback(
     async (input: CategoryInput): Promise<void> => {

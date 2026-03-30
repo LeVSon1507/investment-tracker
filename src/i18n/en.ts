@@ -82,7 +82,7 @@ const en = {
       geminiApiKey: 'Gemini API Key',
       geminiApiKeyHint: 'Get a free key at aistudio.google.com',
       geminiModel: 'AI Model',
-      geminiModelHint: 'gemini-2.0-flash for speed, gemini-2.5-flash for quality',
+      geminiModelHint: 'gemini-2.5-flash-lite for speed, gemini-2.5-pro for quality',
       salaryDay: 'Salary Day',
       salaryDayHint: 'System will remind you to allocate salary on this day',
       currency: 'Currency',

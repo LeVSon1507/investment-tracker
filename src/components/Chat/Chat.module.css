@@ -219,3 +219,38 @@
   font-size: 14px;
   color: var(--warning);
 }
+
+@media (max-width: 768px) {
+  .chatContainer {
+    height: calc(100vh - 140px);
+  }
+
+  .chatTitle {
+    font-size: 22px;
+  }
+
+  .messageBubble {
+    max-width: 90%;
+  }
+
+  .sendButton {
+    height: 48px !important;
+    width: 48px !important;
+  }
+
+  .noApiKeyBanner {
+    flex-direction: column;
+    gap: var(--spacing-sm);
+    text-align: center;
+  }
+
+  .parsedItem {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-xs);
+  }
+
+  .parsedItemAmount {
+    align-self: flex-end;
+  }
+}

@@ -1,6 +1,6 @@
 import type { ParsedInvestmentResult } from '../types/investment';
 
-const DEFAULT_MODEL = 'gemini-2.0-flash';
+const DEFAULT_MODEL = 'gemini-2.5-flash-lite';
 
 function buildPrompt(userText: string, existingCategories: string[]): string {
   return `Bạn là trợ lý tài chính chuyên phân tích thông tin đầu tư.

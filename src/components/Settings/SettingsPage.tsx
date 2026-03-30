@@ -199,9 +199,12 @@ function SettingsPage(): ReactElement {
               onChange={setLocalModel}
               style={{ width: '100%' }}
               options={[
-                { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash (nhanh, miễn phí)' },
-                { value: 'gemini-2.5-flash-preview-04-17', label: 'Gemini 2.5 Flash (chất lượng cao)' },
-                { value: 'gemini-2.5-pro-preview-05-06', label: 'Gemini 2.5 Pro (tốt nhất, tốn token)' },
+                { value: 'gemini-2.5-flash-lite', label: '⚡ Gemini 2.5 Flash-Lite — rẻ nhất ($0.10/1M)' },
+                { value: 'gemini-2.5-flash', label: '🚀 Gemini 2.5 Flash — cân bằng ($0.30/1M)' },
+                { value: 'gemini-2.5-pro', label: '💎 Gemini 2.5 Pro — tốt nhất ($1.25/1M)' },
+                { value: 'gemini-3-flash-preview', label: '🆕 Gemini 3 Flash Preview — thế hệ mới' },
+                { value: 'gemini-3.1-flash-lite-preview', label: '🆕 Gemini 3.1 Flash-Lite Preview' },
+                { value: 'gemini-3.1-pro-preview', label: '🆕 Gemini 3.1 Pro Preview — cao cấp nhất' },
               ]}
             />
             <div className={styles.fieldHint}>{t('settings.geminiModelHint')}</div>

@@ -212,15 +212,70 @@ function InvestmentListPage(): ReactElement {
       </div>
 
       <div className={`glass-card ${styles.tableCard}`}>
-        <Table
-          columns={columns}
-          dataSource={investments}
-          rowKey="id"
-          loading={isLoading}
-          pagination={{ pageSize: 20, showSizeChanger: false }}
-          scroll={{ x: 800 }}
-          locale={{ emptyText: t('common.noData') }}
-        />
+        <div className={styles.desktopTable}>
+          <Table
+            columns={columns}
+            dataSource={investments}
+            rowKey="id"
+            loading={isLoading}
+            pagination={{ pageSize: 20, showSizeChanger: false }}
+            scroll={{ x: 800 }}
+            locale={{ emptyText: t('common.noData') }}
+          />
+        </div>
+
+        <div className={styles.mobileCardList}>
+          {investments.map((record) => (
+            <div key={record.id} className={styles.mobileCard}>
+              <div className={styles.mobileCardHeader}>
+                <span className={styles.mobileCardName}>{record.investment_name}</span>
+                <span className={styles.mobileCardAmount}>
+                  {formatCurrency(record.amount, currency)}
+                </span>
+              </div>
+              <div className={styles.mobileCardMeta}>
+                {record.category && (
+                  <span className={styles.mobileCardCategory}>
+                    {record.category.icon} {record.category.category_name}
+                  </span>
+                )}
+                <span className={styles.mobileCardDate}>
+                  {dayjs(record.invested_at).format('DD/MM/YYYY')}
+                </span>
+              </div>
+              {record.note && (
+                <div className={styles.mobileCardNote}>{record.note}</div>
+              )}
+              <div className={styles.mobileCardActions}>
+                <Button
+                  type="text"
+                  icon={<EditOutlined />}
+                  className={styles.editBtn}
+                  onClick={() => handleOpenEdit(record)}
+                  size="small"
+                />
+                <Popconfirm
+                  title={t('investment.confirmDelete')}
+                  onConfirm={() => handleDelete(record.id)}
+                  okText={t('common.confirm')}
+                  cancelText={t('common.cancel')}
+                >
+                  <Button
+                    type="text"
+                    icon={<DeleteOutlined />}
+                    className={styles.deleteBtn}
+                    size="small"
+                  />
+                </Popconfirm>
+              </div>
+            </div>
+          ))}
+          {investments.length === 0 && (
+            <div style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>
+              {t('common.noData')}
+            </div>
+          )}
+        </div>
       </div>
 
       <Modal

@@ -82,7 +82,7 @@ const vi = {
       geminiApiKey: 'Gemini API Key',
       geminiApiKeyHint: 'Lấy key miễn phí tại aistudio.google.com',
       geminiModel: 'Model AI',
-      geminiModelHint: 'gemini-2.0-flash cho tốc độ, gemini-2.5-flash cho chất lượng',
+      geminiModelHint: 'gemini-2.5-flash-lite cho tốc độ, gemini-2.5-pro cho chất lượng',
       salaryDay: 'Ngày nhận lương',
       salaryDayHint: 'Hệ thống sẽ nhắc bạn phân bổ tiền lương vào ngày này',
       currency: 'Đơn vị tiền tệ',

@@ -131,6 +131,22 @@ function AppLayout(): ReactElement {
         )}
         <Outlet />
       </Content>
+
+      {/* Mobile bottom navigation */}
+      <nav className={styles.mobileBottomNav}>
+        <ul className={styles.mobileNavList}>
+          {menuItems.map((navItem) => (
+            <li
+              key={navItem.key}
+              className={`${styles.mobileNavItem} ${location.pathname === navItem.key ? styles.mobileNavItemActive : ''}`}
+              onClick={() => navigate(navItem.key)}
+            >
+              <span className={styles.mobileNavIcon}>{navItem.icon}</span>
+              {navItem.label}
+            </li>
+          ))}
+        </ul>
+      </nav>
     </Layout>
   );
 }
