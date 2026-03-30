@@ -34,6 +34,10 @@ const vi = {
       name: 'Tên khoản đầu tư',
       category: 'Danh mục',
       amount: 'Số tiền',
+      target: 'Mục tiêu khoản này',
+      totalTracking: 'Tính vào tổng đầu tư',
+      countInTotal: 'Có tính vào tổng',
+      excludeFromTotal: 'Không tính vào tổng',
       date: 'Ngày đầu tư',
       note: 'Ghi chú',
       actions: 'Thao tác',
@@ -43,6 +47,7 @@ const vi = {
       placeholder: {
         name: 'VD: Cổ phiếu VCB, Bitcoin...',
         amount: 'Nhập số tiền',
+        target: 'Nhập mục tiêu cho khoản này',
         note: 'Ghi chú thêm (không bắt buộc)',
       },
     },

@@ -16,7 +16,7 @@ export function useInvestments(): UseInvestmentsReturn {
   const [investments, setInvestments] = useState<InvestmentWithCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchInvestments = useCallback(async (): Promise<void> => {
+  const fetchInvestments = useCallback(async (): Promise<InvestmentWithCategory[]> => {
     const { data, error } = await supabase
       .from('investments')
       .select('*, category:investment_categories(*)')
@@ -24,19 +24,31 @@ export function useInvestments(): UseInvestmentsReturn {
 
     if (error) {
       console.error('Failed to fetch investments:', error.message);
-      return;
+      return [];
     }
 
-    setInvestments(data ?? []);
-    setIsLoading(false);
+    return data ?? [];
   }, []);
 
   useEffect(() => {
-    fetchInvestments();
+    let isStale = false;
+
+    async function loadInvestments(): Promise<void> {
+      const data = await fetchInvestments();
+      if (isStale) return;
+      setInvestments(data);
+      setIsLoading(false);
+    }
+
+    loadInvestments();
+
+    return () => {
+      isStale = true;
+    };
   }, [fetchInvestments]);
 
   const totalAmount = investments.reduce(
-    (sum, investment) => sum + investment.amount,
+    (sum, investment) => (investment.include_in_total ? sum + investment.amount : sum),
     0,
   );
 
@@ -46,6 +58,8 @@ export function useInvestments(): UseInvestmentsReturn {
         category_id: input.categoryId,
         investment_name: input.investmentName,
         amount: input.amount,
+        target_amount: input.targetAmount ?? null,
+        include_in_total: input.includeInTotal ?? true,
         note: input.note ?? null,
         invested_at: input.investedAt ?? new Date().toISOString().split('T')[0],
       });
@@ -54,7 +68,7 @@ export function useInvestments(): UseInvestmentsReturn {
         throw new Error(error.message);
       }
 
-      await fetchInvestments();
+      setInvestments(await fetchInvestments());
     },
     [fetchInvestments],
   );
@@ -65,6 +79,8 @@ export function useInvestments(): UseInvestmentsReturn {
       if (input.categoryId !== undefined) updatePayload.category_id = input.categoryId;
       if (input.investmentName !== undefined) updatePayload.investment_name = input.investmentName;
       if (input.amount !== undefined) updatePayload.amount = input.amount;
+      if (input.targetAmount !== undefined) updatePayload.target_amount = input.targetAmount;
+      if (input.includeInTotal !== undefined) updatePayload.include_in_total = input.includeInTotal;
       if (input.note !== undefined) updatePayload.note = input.note;
       if (input.investedAt !== undefined) updatePayload.invested_at = input.investedAt;
       updatePayload.updated_at = new Date().toISOString();
@@ -78,7 +94,7 @@ export function useInvestments(): UseInvestmentsReturn {
         throw new Error(error.message);
       }
 
-      await fetchInvestments();
+      setInvestments(await fetchInvestments());
     },
     [fetchInvestments],
   );
@@ -91,7 +107,7 @@ export function useInvestments(): UseInvestmentsReturn {
         throw new Error(error.message);
       }
 
-      await fetchInvestments();
+      setInvestments(await fetchInvestments());
     },
     [fetchInvestments],
   );
@@ -103,6 +119,8 @@ export function useInvestments(): UseInvestmentsReturn {
     createInvestment,
     updateInvestment,
     deleteInvestment,
-    refetch: fetchInvestments,
+    refetch: async (): Promise<void> => {
+      setInvestments(await fetchInvestments());
+    },
   };
 }

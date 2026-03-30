@@ -32,6 +32,8 @@ type FormValues = {
   investmentName: string;
   categoryId: string;
   amount: number;
+  targetAmount?: number;
+  includeInTotal: boolean;
   investedAt: dayjs.Dayjs;
   note?: string;
 };
@@ -50,7 +52,10 @@ function InvestmentListPage(): ReactElement {
   const handleOpenCreate = useCallback((): void => {
     setEditingId(null);
     form.resetFields();
-    form.setFieldValue('investedAt', dayjs());
+    form.setFieldsValue({
+      investedAt: dayjs(),
+      includeInTotal: true,
+    });
     setIsModalOpen(true);
   }, [form]);
 
@@ -61,6 +66,8 @@ function InvestmentListPage(): ReactElement {
         investmentName: record.investment_name,
         categoryId: record.category_id ?? undefined,
         amount: record.amount,
+        targetAmount: record.target_amount ?? undefined,
+        includeInTotal: record.include_in_total,
         investedAt: dayjs(record.invested_at),
         note: record.note ?? undefined,
       });
@@ -76,6 +83,8 @@ function InvestmentListPage(): ReactElement {
         investmentName: values.investmentName,
         categoryId: values.categoryId,
         amount: values.amount,
+        targetAmount: values.targetAmount ?? null,
+        includeInTotal: values.includeInTotal,
         investedAt: values.investedAt.format('YYYY-MM-DD'),
         note: values.note,
       };
@@ -145,6 +154,18 @@ function InvestmentListPage(): ReactElement {
         defaultSortOrder: 'descend',
       },
       {
+        title: t('investment.target'),
+        dataIndex: 'target_amount',
+        key: 'target_amount',
+        width: 160,
+        align: 'right',
+        render: (targetAmount: number | null) =>
+          targetAmount
+            ? formatCurrency(targetAmount, currency)
+            : '—',
+        sorter: (a, b) => (a.target_amount ?? 0) - (b.target_amount ?? 0),
+      },
+      {
         title: t('investment.date'),
         dataIndex: 'invested_at',
         key: 'invested_at',
@@ -160,6 +181,20 @@ function InvestmentListPage(): ReactElement {
         ellipsis: true,
         width: 200,
         render: (note: string | null) => note ?? '—',
+      },
+      {
+        title: t('investment.totalTracking'),
+        dataIndex: 'include_in_total',
+        key: 'include_in_total',
+        width: 150,
+        render: (includeInTotal: boolean) =>
+          includeInTotal ? t('investment.countInTotal') : t('investment.excludeFromTotal'),
+        filters: [
+          { text: t('investment.countInTotal'), value: 'included' },
+          { text: t('investment.excludeFromTotal'), value: 'excluded' },
+        ],
+        onFilter: (value, record) =>
+          value === 'included' ? record.include_in_total : !record.include_in_total,
       },
       {
         title: t('investment.actions'),
@@ -241,6 +276,18 @@ function InvestmentListPage(): ReactElement {
                 )}
                 <span className={styles.mobileCardDate}>
                   {dayjs(record.invested_at).format('DD/MM/YYYY')}
+                </span>
+              </div>
+              <div className={styles.mobileCardMeta}>
+                <span className={styles.mobileCardDate}>
+                  {t('investment.target')}: {record.target_amount
+                    ? formatCurrency(record.target_amount, currency)
+                    : '—'}
+                </span>
+                <span className={styles.mobileCardDate}>
+                  {record.include_in_total
+                    ? t('investment.countInTotal')
+                    : t('investment.excludeFromTotal')}
                 </span>
               </div>
               {record.note && (
@@ -333,6 +380,33 @@ function InvestmentListPage(): ReactElement {
               style={{ width: '100%' }}
               addonAfter={currency}
             />
+          </Form.Item>
+
+          <Form.Item
+            name="targetAmount"
+            label={t('investment.target')}
+          >
+            <InputNumber
+              placeholder={t('investment.placeholder.target')}
+              formatter={(value) =>
+                `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+              }
+              parser={(value) => parseFloat(value?.replace(/,/g, '') ?? '0') as 0}
+              min={0}
+              style={{ width: '100%' }}
+              addonAfter={currency}
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="includeInTotal"
+            label={t('investment.totalTracking')}
+            rules={[{ required: true }]}
+          >
+            <Select>
+              <Select.Option value>{t('investment.countInTotal')}</Select.Option>
+              <Select.Option value={false}>{t('investment.excludeFromTotal')}</Select.Option>
+            </Select>
           </Form.Item>
 
           <Form.Item

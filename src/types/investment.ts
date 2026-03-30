@@ -17,6 +17,8 @@ export type Investment = {
   category_id: string | null;
   investment_name: string;
   amount: number;
+  target_amount: number | null;
+  include_in_total: boolean;
   note: string | null;
   invested_at: string;
   created_at: string;
@@ -28,6 +30,8 @@ export type InvestmentInput = {
   categoryId: string;
   investmentName: string;
   amount: number;
+  targetAmount?: number | null;
+  includeInTotal?: boolean;
   note?: string;
   investedAt?: string;
 };

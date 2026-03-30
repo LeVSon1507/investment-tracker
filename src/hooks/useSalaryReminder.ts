@@ -17,8 +17,11 @@ export function useSalaryReminder(): SalaryReminderState {
     })),
   );
 
-  const today = new Date();
-  const currentMonthKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+  const today = useMemo(() => new Date(), []);
+  const currentMonthKey = useMemo(
+    () => `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`,
+    [today],
+  );
 
   const shouldShowReminder = useMemo((): boolean => {
     if (salaryDay <= 0) return false;

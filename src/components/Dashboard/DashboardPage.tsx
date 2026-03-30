@@ -44,7 +44,7 @@ function DashboardPage(): ReactElement {
     }
 
     for (const investment of investments) {
-      if (!investment.category_id) continue;
+      if (!investment.category_id || !investment.include_in_total) continue;
 
       const existing = summaryMap.get(investment.category_id);
       if (existing) {
@@ -68,8 +68,9 @@ function DashboardPage(): ReactElement {
   );
 
   const largestInvestment = useMemo(() => {
-    if (investments.length === 0) return null;
-    return investments.reduce((largest, current) =>
+    const includedInvestments = investments.filter((investment) => investment.include_in_total);
+    if (includedInvestments.length === 0) return null;
+    return includedInvestments.reduce((largest, current) =>
       current.amount > largest.amount ? current : largest,
     );
   }, [investments]);

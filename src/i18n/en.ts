@@ -34,6 +34,10 @@ const en = {
       name: 'Investment Name',
       category: 'Category',
       amount: 'Amount',
+      target: 'Investment Target',
+      totalTracking: 'Count In Total',
+      countInTotal: 'Included in total',
+      excludeFromTotal: 'Excluded from total',
       date: 'Investment Date',
       note: 'Note',
       actions: 'Actions',
@@ -43,6 +47,7 @@ const en = {
       placeholder: {
         name: 'e.g. VCB Stock, Bitcoin...',
         amount: 'Enter amount',
+        target: 'Enter target for this investment',
         note: 'Additional notes (optional)',
       },
     },

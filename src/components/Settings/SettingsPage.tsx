@@ -54,9 +54,13 @@ function SettingsPage(): ReactElement {
   const handleSaveGeneral = useCallback((): void => {
     setGeminiApiKey(localApiKey);
     setGeminiModel(localModel);
+    message.success(t('settings.saved'));
+  }, [localApiKey, localModel, setGeminiApiKey, setGeminiModel, t]);
+
+  const handleSaveSalaryDay = useCallback((): void => {
     setSalaryDay(localSalaryDay);
     message.success(t('settings.saved'));
-  }, [localApiKey, localModel, localSalaryDay, setGeminiApiKey, setGeminiModel, setSalaryDay, t]);
+  }, [localSalaryDay, setSalaryDay, t]);
 
   const handleValidateKey = useCallback(async (): Promise<void> => {
     setIsValidating(true);
@@ -223,13 +227,18 @@ function SettingsPage(): ReactElement {
         <div className={styles.settingsCardTitle}>
           <CalendarOutlined /> {t('settings.salaryDay')}
         </div>
-        <InputNumber
-          value={localSalaryDay}
-          onChange={(v) => setLocalSalaryDay(v ?? 25)}
-          min={1}
-          max={31}
-          style={{ width: 120 }}
-        />
+        <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+          <InputNumber
+            value={localSalaryDay}
+            onChange={(v) => setLocalSalaryDay(v ?? 25)}
+            min={1}
+            max={31}
+            style={{ width: 120 }}
+          />
+          <Button type="primary" onClick={handleSaveSalaryDay} className={styles.saveButton}>
+            {t('common.save')}
+          </Button>
+        </Space>
         <div className={styles.fieldHint}>{t('settings.salaryDayHint')}</div>
       </div>
 
