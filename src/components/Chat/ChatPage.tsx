@@ -3,7 +3,7 @@ import { Button, Input, message } from 'antd';
 import { SendOutlined, ClearOutlined, CheckCircleFilled, SettingOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { useShallow } from 'zustand/shallow';
+
 import { useAiParser } from '../../hooks/useAiParser';
 import { useCategories } from '../../hooks/useCategories';
 import { useInvestments } from '../../hooks/useInvestments';
@@ -19,17 +19,13 @@ function ChatPage(): ReactElement {
     useAiParser();
   const { categories } = useCategories();
   const { createInvestment } = useInvestments();
-  const { geminiApiKey, currency } = useSettingsStore(
-    useShallow((state) => ({
-      geminiApiKey: state.geminiApiKey,
-      currency: state.currency,
-    })),
-  );
+  const currency = useSettingsStore((state) => state.currency);
+  const getEffectiveApiKey = useSettingsStore((state) => state.getEffectiveApiKey);
 
   const [inputText, setInputText] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const hasApiKey = geminiApiKey.length > 0;
+  const hasApiKey = getEffectiveApiKey().length > 0;
   const categoryNames = categories.map((category) => category.category_name);
 
   useEffect(() => {

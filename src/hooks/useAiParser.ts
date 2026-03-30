@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { parseInvestmentText } from '../lib/gemini';
 import { useSettingsStore } from '../stores/settingsStore';
 import type { ParsedInvestmentResult, ChatMessage } from '../types/investment';
-import { useShallow } from 'zustand/shallow';
+
 
 type UseAiParserReturn = {
   messages: ChatMessage[];
@@ -19,12 +19,8 @@ function createMessageId(): string {
 export function useAiParser(): UseAiParserReturn {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isParsing, setIsParsing] = useState(false);
-  const { geminiApiKey, geminiModel } = useSettingsStore(
-    useShallow((state) => ({
-      geminiApiKey: state.geminiApiKey,
-      geminiModel: state.geminiModel,
-    })),
-  );
+  const geminiModel = useSettingsStore((state) => state.geminiModel);
+  const getEffectiveApiKey = useSettingsStore((state) => state.getEffectiveApiKey);
 
   const sendMessage = useCallback(
     async (text: string, existingCategories: string[]): Promise<void> => {
@@ -41,7 +37,7 @@ export function useAiParser(): UseAiParserReturn {
       try {
         const parsed: ParsedInvestmentResult[] = await parseInvestmentText(
           text,
-          geminiApiKey,
+          getEffectiveApiKey(),
           existingCategories,
           geminiModel,
         );
@@ -71,7 +67,7 @@ export function useAiParser(): UseAiParserReturn {
         setIsParsing(false);
       }
     },
-    [geminiApiKey, geminiModel],
+    [getEffectiveApiKey, geminiModel],
   );
 
   const confirmParsedInvestments = useCallback((messageId: string): void => {

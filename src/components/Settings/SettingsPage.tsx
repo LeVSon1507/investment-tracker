@@ -4,11 +4,12 @@ import {
 } from 'antd';
 import {
   RobotOutlined, CalendarOutlined, GlobalOutlined, DeleteOutlined, PlusOutlined,
+  KeyOutlined, CheckCircleFilled, LockOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/shallow';
 import i18n from '../../i18n';
-import { useSettingsStore } from '../../stores/settingsStore';
+import { useSettingsStore, verifyFallbackPassword, hasEnvFallbackKey } from '../../stores/settingsStore';
 import { useCategories, DEFAULT_CATEGORIES } from '../../hooks/useCategories';
 import { formatCompactCurrency } from '../../utils/formatCurrency';
 import { validateApiKey } from '../../lib/gemini';
@@ -31,19 +32,24 @@ function SettingsPage(): ReactElement {
       salaryDay: state.salaryDay,
       currency: state.currency,
       language: state.language,
+      isFallbackUnlocked: state.isFallbackUnlocked,
     })),
   );
-  const { setGeminiApiKey, setGeminiModel, setSalaryDay, setCurrency, setLanguage } =
+  const { setGeminiApiKey, setGeminiModel, setSalaryDay, setCurrency, setLanguage, setFallbackUnlocked, getEffectiveApiKey } =
     useSettingsStore();
 
   const { categories, createCategory, deleteCategory } = useCategories();
   const [isValidating, setIsValidating] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [categoryForm] = Form.useForm<CategoryFormValues>();
+  const [fallbackPassword, setFallbackPassword] = useState('');
 
   const [localApiKey, setLocalApiKey] = useState(settings.geminiApiKey);
   const [localModel, setLocalModel] = useState(settings.geminiModel);
   const [localSalaryDay, setLocalSalaryDay] = useState(settings.salaryDay);
+
+  const isEnvKeyAvailable = hasEnvFallbackKey();
+  const isUsingFallback = settings.geminiApiKey.length === 0 && settings.isFallbackUnlocked && isEnvKeyAvailable;
 
   const handleSaveGeneral = useCallback((): void => {
     setGeminiApiKey(localApiKey);
@@ -54,14 +60,30 @@ function SettingsPage(): ReactElement {
 
   const handleValidateKey = useCallback(async (): Promise<void> => {
     setIsValidating(true);
-    const isValid = await validateApiKey(localApiKey, localModel);
+    const effectiveKey = localApiKey || getEffectiveApiKey();
+    const isValid = await validateApiKey(effectiveKey, localModel);
     if (isValid) {
       message.success('API Key hợp lệ! ✅');
     } else {
       message.error('API Key không hợp lệ hoặc model không khả dụng');
     }
     setIsValidating(false);
-  }, [localApiKey, localModel]);
+  }, [localApiKey, localModel, getEffectiveApiKey]);
+
+  const handleUnlockFallback = useCallback((): void => {
+    if (verifyFallbackPassword(fallbackPassword)) {
+      setFallbackUnlocked(true);
+      setFallbackPassword('');
+      message.success('🔓 Đã mở khóa API Key mặc định!');
+    } else {
+      message.error('Sai mật khẩu!');
+    }
+  }, [fallbackPassword, setFallbackUnlocked]);
+
+  const handleLockFallback = useCallback((): void => {
+    setFallbackUnlocked(false);
+    message.info('🔒 Đã khóa API Key mặc định');
+  }, [setFallbackUnlocked]);
 
   const handleCurrencyChange = useCallback(
     (value: Currency): void => {
@@ -126,6 +148,51 @@ function SettingsPage(): ReactElement {
             />
             <div className={styles.fieldHint}>{t('settings.geminiApiKeyHint')}</div>
           </div>
+
+          {/* Fallback key unlock section - only show when no custom key and env key exists */}
+          {isEnvKeyAvailable && localApiKey.length === 0 && (
+            <div className={styles.fallbackSection}>
+              {isUsingFallback ? (
+                <div className={styles.fallbackActive}>
+                  <span className={styles.fallbackActiveText}>
+                    <CheckCircleFilled style={{ color: '#52c41a' }} /> Đang dùng API Key mặc định
+                  </span>
+                  <Button
+                    size="small"
+                    icon={<LockOutlined />}
+                    onClick={handleLockFallback}
+                    danger
+                  >
+                    Khóa
+                  </Button>
+                </div>
+              ) : (
+                <div className={styles.fallbackUnlock}>
+                  <div className={styles.fallbackLabel}>
+                    <KeyOutlined /> Nhập mật khẩu để dùng key mặc định
+                  </div>
+                  <Space>
+                    <Input.Password
+                      value={fallbackPassword}
+                      onChange={(e) => setFallbackPassword(e.target.value)}
+                      placeholder="Mật khẩu..."
+                      size="small"
+                      onPressEnter={handleUnlockFallback}
+                      style={{ width: 160 }}
+                    />
+                    <Button
+                      size="small"
+                      type="primary"
+                      onClick={handleUnlockFallback}
+                    >
+                      Mở khóa
+                    </Button>
+                  </Space>
+                </div>
+              )}
+            </div>
+          )}
+
           <div>
             <Select
               value={localModel}
