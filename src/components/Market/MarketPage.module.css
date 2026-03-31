@@ -1,0 +1,300 @@
+.container {
+  display: grid;
+  gap: var(--spacing-lg);
+  animation: fadeInUp 0.5s ease-out;
+}
+
+.pageTitle {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-sm);
+}
+
+.card {
+  padding: var(--spacing-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+/* Tab styles */
+.marketTabs :global(.ant-tabs-nav) {
+  margin-bottom: var(--spacing-md);
+}
+
+.marketTabs :global(.ant-tabs-tab) {
+  font-size: 15px;
+  font-weight: 600;
+  padding: 10px 20px;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  transition: all 0.2s ease;
+}
+
+.marketTabs :global(.ant-tabs-tab:hover) {
+  color: var(--accent-primary);
+}
+
+.marketTabs :global(.ant-tabs-ink-bar) {
+  background: var(--accent-gradient);
+  height: 3px;
+  border-radius: 2px;
+}
+
+.tabContent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.cardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+}
+
+.cardTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.cardMeta {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.errorText {
+  font-size: 13px;
+  color: var(--danger);
+}
+
+.emptyText {
+  font-size: 13px;
+  color: var(--text-muted);
+  text-align: center;
+  padding: var(--spacing-xl) 0;
+}
+
+.tableWrapper {
+  overflow-x: auto;
+}
+
+/* Gold table */
+.tableHeader {
+  display: grid;
+  grid-template-columns: 1.2fr repeat(4, 1fr);
+  gap: var(--spacing-sm);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.headerBuy {
+  text-align: right;
+  color: #22c55e;
+}
+
+.headerSell {
+  text-align: right;
+  color: #f87171;
+}
+
+.headerRight {
+  text-align: right;
+}
+
+.tableRow {
+  display: grid;
+  grid-template-columns: 1.2fr repeat(4, 1fr);
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm);
+  align-items: center;
+  border-bottom: 1px solid var(--border-subtle);
+  transition: background 0.15s ease;
+}
+
+.tableRow:last-child {
+  border-bottom: none;
+}
+
+.tableRow:hover {
+  background: var(--bg-glass-hover);
+  border-radius: var(--radius-sm);
+}
+
+.productCell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.productName {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.groupName {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 1px;
+}
+
+.cellRight {
+  text-align: right;
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.priceMain {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.priceBuy {
+  color: #22c55e;
+}
+
+.priceSell {
+  color: #f87171;
+}
+
+.priceUnit {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+/* Stock table */
+.stockTableHeader {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr 1fr;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.stockRow {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr 1fr;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm);
+  align-items: center;
+  border-bottom: 1px solid var(--border-subtle);
+  transition: background 0.15s ease;
+}
+
+.stockRow:last-child {
+  border-bottom: none;
+}
+
+.stockRow:hover {
+  background: var(--bg-glass-hover);
+  border-radius: var(--radius-sm);
+}
+
+.stockInfo {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.stockSymbol {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--accent-primary);
+  letter-spacing: 0.02em;
+}
+
+.stockMeta {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 1px;
+}
+
+.stockPrice {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.changeUp {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--success);
+}
+
+.changeDown {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--danger);
+}
+
+/* Empty state for stocks tab */
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-2xl) var(--spacing-lg);
+  text-align: center;
+}
+
+.emptyIcon {
+  font-size: 48px;
+  margin-bottom: var(--spacing-md);
+  opacity: 0.4;
+}
+
+.emptyTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: var(--spacing-xs);
+}
+
+.emptyHint {
+  font-size: 13px;
+  color: var(--text-muted);
+  max-width: 400px;
+  line-height: 1.5;
+}
+
+@media (max-width: 768px) {
+  .tableHeader {
+    grid-template-columns: 1.2fr repeat(2, 1fr);
+  }
+
+  .tableRow {
+    grid-template-columns: 1.2fr repeat(2, 1fr);
+  }
+
+  .stockTableHeader {
+    grid-template-columns: 1.2fr 1fr;
+  }
+
+  .stockRow {
+    grid-template-columns: 1.2fr 1fr;
+  }
+
+  .colHideMobile {
+    display: none;
+  }
+}

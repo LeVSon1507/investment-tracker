@@ -60,7 +60,39 @@ export function useCategories(): UseCategoriesReturn {
         return;
       }
 
-      setCategories(data ?? []);
+      // Auto-seed default categories for new users who have none
+      if (!data || data.length === 0) {
+        const seedRows = DEFAULT_CATEGORIES.map((defaultCategory) => ({
+          category_name: defaultCategory.categoryName,
+          icon: defaultCategory.icon,
+          color: defaultCategory.color,
+        }));
+
+        const { error: seedError } = await supabase
+          .from('investment_categories')
+          .insert(seedRows);
+
+        if (isStale) return;
+
+        if (seedError) {
+          console.error('Failed to seed default categories:', seedError.message);
+          setIsLoading(false);
+          return;
+        }
+
+        // Re-fetch after seeding so we get the full rows with ids
+        const { data: seededData } = await supabase
+          .from('investment_categories')
+          .select('*')
+          .order('created_at', { ascending: true });
+
+        if (isStale) return;
+        setCategories(seededData ?? []);
+        setIsLoading(false);
+        return;
+      }
+
+      setCategories(data);
       setIsLoading(false);
     }
 

@@ -1,29 +1,58 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { parseInvestmentText } from '../lib/gemini';
 import { useSettingsStore } from '../stores/settingsStore';
-import type { ChatMessage } from '../types/investment';
-import type { AiStructuredResponse, CategoryUpdateCommand } from '../lib/gemini';
+import type { ChatAttachment, ChatMessage } from '../types/investment';
+import type {
+  AiStructuredResponse,
+  CategoryUpdateCommand,
+  InvestmentCommand,
+  SettingsUpdateCommand,
+} from '../lib/gemini';
 
-const CHAT_STORAGE_KEY = 'investtracker_chat_history';
 const MAX_STORED_MESSAGES = 100;
 
 type UseAiParserReturn = {
   messages: ChatMessage[];
   isParsing: boolean;
-  sendMessage: (text: string, existingCategories: string[]) => Promise<void>;
+  sendMessage: (
+    text: string,
+    context: {
+      existingCategories: string[];
+      existingInvestments: string[];
+      settings: {
+        salaryDay: number;
+        currency: 'VND' | 'USD';
+        language: 'vi' | 'en';
+        geminiModel: string;
+      };
+      account: {
+        userId: string;
+        label: string;
+      };
+    },
+    attachment?: ChatAttachment | null,
+  ) => Promise<void>;
   confirmParsedInvestments: (messageId: string) => void;
   clearMessages: () => void;
   categoryUpdates: CategoryUpdateCommand[] | null;
+  investmentUpdates: InvestmentCommand[] | null;
+  settingsUpdate: SettingsUpdateCommand | null;
   clearCategoryUpdates: () => void;
+  clearInvestmentUpdates: () => void;
+  clearSettingsUpdate: () => void;
 };
 
 function createMessageId(): string {
   return `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 }
 
-function loadStoredMessages(): ChatMessage[] {
+function getChatStorageKey(accountUserId: string): string {
+  return `investtracker_chat_history_${accountUserId}`;
+}
+
+function loadStoredMessages(accountUserId: string): ChatMessage[] {
   try {
-    const stored = localStorage.getItem(CHAT_STORAGE_KEY);
+    const stored = localStorage.getItem(getChatStorageKey(accountUserId));
     if (!stored) return [];
 
     const parsed = JSON.parse(stored) as ChatMessage[];
@@ -37,42 +66,70 @@ function loadStoredMessages(): ChatMessage[] {
   }
 }
 
-function saveMessagesToStorage(messageList: ChatMessage[]): void {
+function saveMessagesToStorage(accountUserId: string, messageList: ChatMessage[]): void {
   try {
     const messagesToSave = messageList.slice(-MAX_STORED_MESSAGES);
-    localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messagesToSave));
+    localStorage.setItem(getChatStorageKey(accountUserId), JSON.stringify(messagesToSave));
   } catch {
     // localStorage might be full, silently fail
   }
 }
 
-export function useAiParser(): UseAiParserReturn {
-  const [messages, setMessages] = useState<ChatMessage[]>(() => loadStoredMessages());
+export function useAiParser(accountUserId: string): UseAiParserReturn {
+  const [messages, setMessages] = useState<ChatMessage[]>(() => loadStoredMessages(accountUserId));
   const [isParsing, setIsParsing] = useState(false);
   const [categoryUpdates, setCategoryUpdates] = useState<CategoryUpdateCommand[] | null>(null);
+  const [investmentUpdates, setInvestmentUpdates] = useState<InvestmentCommand[] | null>(null);
+  const [settingsUpdate, setSettingsUpdate] = useState<SettingsUpdateCommand | null>(null);
   const geminiModel = useSettingsStore((state) => state.geminiModel);
   const getEffectiveApiKey = useSettingsStore((state) => state.getEffectiveApiKey);
 
   // Ref to track saved message IDs and prevent double-save
   const savedMessageIds = useRef<Set<string>>(
     new Set(
-      loadStoredMessages()
+      loadStoredMessages(accountUserId)
         .filter((chatMessage) => chatMessage.isConfirmed)
         .map((chatMessage) => chatMessage.id),
     ),
   );
 
+  useEffect(() => {
+    const loadedMessages = loadStoredMessages(accountUserId);
+    setMessages(loadedMessages);
+    savedMessageIds.current = new Set(
+      loadedMessages.filter((chatMessage) => chatMessage.isConfirmed).map((chatMessage) => chatMessage.id),
+    );
+  }, [accountUserId]);
+
   // Persist messages to localStorage whenever they change
   useEffect(() => {
-    saveMessagesToStorage(messages);
-  }, [messages]);
+    saveMessagesToStorage(accountUserId, messages);
+  }, [accountUserId, messages]);
 
   const sendMessage = useCallback(
-    async (text: string, existingCategories: string[]): Promise<void> => {
+    async (
+      text: string,
+      context: {
+        existingCategories: string[];
+        existingInvestments: string[];
+        settings: {
+          salaryDay: number;
+          currency: 'VND' | 'USD';
+          language: 'vi' | 'en';
+          geminiModel: string;
+        };
+        account: {
+          userId: string;
+          label: string;
+        };
+      },
+      attachment: ChatAttachment | null = null,
+    ): Promise<void> => {
       const userMessage: ChatMessage = {
         id: createMessageId(),
         role: 'user',
         content: text,
+        attachmentName: attachment?.name,
         timestamp: new Date(),
       };
 
@@ -83,7 +140,8 @@ export function useAiParser(): UseAiParserReturn {
         const aiResponse: AiStructuredResponse = await parseInvestmentText(
           text,
           getEffectiveApiKey(),
-          existingCategories,
+          context,
+          attachment,
           geminiModel,
         );
 
@@ -98,12 +156,28 @@ export function useAiParser(): UseAiParserReturn {
             isConfirmed: false,
             timestamp: new Date(),
           };
-        } else if (aiResponse.action === 'update_categories' && aiResponse.categoryUpdates) {
+        } else if (aiResponse.action === 'manage_categories' && aiResponse.categoryUpdates) {
           setCategoryUpdates(aiResponse.categoryUpdates);
           assistantMessage = {
             id: createMessageId(),
             role: 'assistant',
             content: aiResponse.message ?? 'Đã cập nhật danh mục.',
+            timestamp: new Date(),
+          };
+        } else if (aiResponse.action === 'manage_investments' && aiResponse.investmentUpdates) {
+          setInvestmentUpdates(aiResponse.investmentUpdates);
+          assistantMessage = {
+            id: createMessageId(),
+            role: 'assistant',
+            content: aiResponse.message ?? 'Đã chuẩn bị cập nhật khoản đầu tư.',
+            timestamp: new Date(),
+          };
+        } else if (aiResponse.action === 'update_settings' && aiResponse.settingsUpdate) {
+          setSettingsUpdate(aiResponse.settingsUpdate);
+          assistantMessage = {
+            id: createMessageId(),
+            role: 'assistant',
+            content: aiResponse.message ?? 'Đã chuẩn bị cập nhật cài đặt.',
             timestamp: new Date(),
           };
         } else if (aiResponse.action === 'general_response') {
@@ -153,12 +227,23 @@ export function useAiParser(): UseAiParserReturn {
 
   const clearMessages = useCallback((): void => {
     setMessages([]);
+    setCategoryUpdates(null);
+    setInvestmentUpdates(null);
+    setSettingsUpdate(null);
     savedMessageIds.current.clear();
-    localStorage.removeItem(CHAT_STORAGE_KEY);
-  }, []);
+    localStorage.removeItem(getChatStorageKey(accountUserId));
+  }, [accountUserId]);
 
   const clearCategoryUpdates = useCallback((): void => {
     setCategoryUpdates(null);
+  }, []);
+
+  const clearInvestmentUpdates = useCallback((): void => {
+    setInvestmentUpdates(null);
+  }, []);
+
+  const clearSettingsUpdate = useCallback((): void => {
+    setSettingsUpdate(null);
   }, []);
 
   return {
@@ -168,6 +253,10 @@ export function useAiParser(): UseAiParserReturn {
     confirmParsedInvestments,
     clearMessages,
     categoryUpdates,
+    investmentUpdates,
+    settingsUpdate,
     clearCategoryUpdates,
+    clearInvestmentUpdates,
+    clearSettingsUpdate,
   };
 }

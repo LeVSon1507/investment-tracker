@@ -1,5 +1,6 @@
 export type Currency = 'VND' | 'USD';
 export type Language = 'vi' | 'en';
+export type AssetTrackingType = 'none' | 'stock' | 'gold' | 'fund' | 'crypto';
 
 export type InvestmentCategory = {
   id: string;
@@ -19,6 +20,11 @@ export type Investment = {
   amount: number;
   target_amount: number | null;
   include_in_total: boolean;
+  tracking_type: AssetTrackingType;
+  ticker_symbol: string | null;
+  quantity: number | null;
+  purchase_unit_price: number | null;
+  purchase_date: string | null;
   note: string | null;
   invested_at: string;
   created_at: string;
@@ -32,6 +38,11 @@ export type InvestmentInput = {
   amount: number;
   targetAmount?: number | null;
   includeInTotal?: boolean;
+  trackingType?: AssetTrackingType;
+  tickerSymbol?: string | null;
+  quantity?: number | null;
+  purchaseUnitPrice?: number | null;
+  purchaseDate?: string | null;
   note?: string;
   investedAt?: string;
 };
@@ -47,13 +58,25 @@ export type ParsedInvestmentResult = {
   investmentName: string;
   categoryName: string;
   amount: number;
+  trackingType?: AssetTrackingType;
+  tickerSymbol?: string;
+  quantity?: number;
+  purchaseUnitPrice?: number;
+  purchaseDate?: string;
   note?: string;
+};
+
+export type ChatAttachment = {
+  name: string;
+  mimeType: string;
+  base64Data: string;
 };
 
 export type ChatMessage = {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+  attachmentName?: string;
   parsedInvestments?: ParsedInvestmentResult[];
   isConfirmed?: boolean;
   timestamp: Date;

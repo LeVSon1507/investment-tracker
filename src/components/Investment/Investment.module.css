@@ -52,6 +52,18 @@
   font-variant-numeric: tabular-nums;
 }
 
+.profitText {
+  color: var(--success);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.lossText {
+  color: var(--danger);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
 .actionButtons {
   display: flex;
   gap: var(--spacing-xs);

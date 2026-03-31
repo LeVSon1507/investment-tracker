@@ -151,6 +151,88 @@
   color: var(--text-secondary);
 }
 
+.marketSection {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-lg);
+}
+
+.marketCard {
+  padding: var(--spacing-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.marketHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+}
+
+.marketMeta {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.marketList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.marketRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-sm) 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.positionRow {
+  composes: marketRow;
+}
+
+.marketRow:last-child {
+  border-bottom: none;
+}
+
+.marketName {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.marketPriceGroup {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.marketUp {
+  color: var(--success);
+}
+
+.marketDown {
+  color: var(--danger);
+}
+
+.marketError {
+  font-size: 13px;
+  color: var(--danger);
+}
+
+.marketEmpty {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
 @media (max-width: 1200px) {
   .summaryRow {
     grid-template-columns: repeat(2, 1fr);
@@ -164,5 +246,14 @@
 
   .chartsRow {
     grid-template-columns: 1fr;
+  }
+
+  .marketSection {
+    grid-template-columns: 1fr;
+  }
+
+  .marketHeader {
+    flex-direction: column;
+    align-items: stretch;
   }
 }

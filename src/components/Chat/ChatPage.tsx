@@ -6,55 +6,71 @@ import {
   CheckCircleFilled,
   SettingOutlined,
   SwapOutlined,
+  PaperClipOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+import { useShallow } from 'zustand/shallow';
+import i18n from '../../i18n';
 
 import { useAiParser } from '../../hooks/useAiParser';
+import { useAuth } from '../../hooks/useAuth';
 import { useCategories } from '../../hooks/useCategories';
 import { useInvestments } from '../../hooks/useInvestments';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { formatCurrency } from '../../utils/formatCurrency';
-import type { ChatMessage, ParsedInvestmentResult, InvestmentCategory, InvestmentWithCategory } from '../../types/investment';
-import type { CategoryUpdateCommand } from '../../lib/gemini';
+import type { ChatAttachment, ChatMessage, ParsedInvestmentResult, InvestmentCategory, InvestmentWithCategory } from '../../types/investment';
 import styles from './Chat.module.css';
 
-async function applyCategoryReassignments(
-  updates: CategoryUpdateCommand[],
+function findCategoryByName(
   categoryList: InvestmentCategory[],
+  categoryName: string | undefined,
+): InvestmentCategory | undefined {
+  if (!categoryName) return undefined;
+  return categoryList.find(
+    (category) => category.category_name.toLowerCase() === categoryName.toLowerCase(),
+  );
+}
+
+function findInvestmentByName(
   investmentList: InvestmentWithCategory[],
-  updateFn: (id: string, payload: { investmentName: string; categoryId: string; amount: number }) => Promise<void>,
-): Promise<void> {
-  for (const categoryUpdate of updates) {
-    if (categoryUpdate.type !== 'reassign' || !categoryUpdate.investmentNames) continue;
+  investmentName: string,
+): InvestmentWithCategory | undefined {
+  return investmentList.find(
+    (item) =>
+      item.investment_name.toLowerCase() === investmentName.toLowerCase() ||
+      item.investment_name.toLowerCase().includes(investmentName.toLowerCase()) ||
+      investmentName.toLowerCase().includes(item.investment_name.toLowerCase()),
+  );
+}
 
-    const targetCategory = categoryList.find(
-      (category) => category.category_name.toLowerCase() === categoryUpdate.toCategory.toLowerCase(),
-    );
-
-    if (!targetCategory) continue;
-
-    for (const investmentName of categoryUpdate.investmentNames) {
-      const matchingInvestment = investmentList.find(
-        (item) =>
-          item.investment_name.toLowerCase().includes(investmentName.toLowerCase()) ||
-          investmentName.toLowerCase().includes(item.investment_name.toLowerCase()),
-      );
-
-      if (matchingInvestment) {
-        await updateFn(matchingInvestment.id, {
-          investmentName: matchingInvestment.investment_name,
-          categoryId: targetCategory.id,
-          amount: matchingInvestment.amount,
-        });
+async function fileToAttachment(file: File): Promise<ChatAttachment> {
+  const base64Data = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result;
+      if (typeof result !== 'string') {
+        reject(new Error('Không thể đọc file ảnh'));
+        return;
       }
-    }
-  }
+      const [, base64 = ''] = result.split(',');
+      resolve(base64);
+    };
+    reader.onerror = () => reject(new Error('Không thể đọc file ảnh'));
+    reader.readAsDataURL(file);
+  });
+
+  return {
+    name: file.name,
+    mimeType: file.type || 'image/jpeg',
+    base64Data,
+  };
 }
 
 function ChatPage(): ReactElement {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const {
     messages,
     isParsing,
@@ -62,20 +78,61 @@ function ChatPage(): ReactElement {
     confirmParsedInvestments,
     clearMessages,
     categoryUpdates,
+    investmentUpdates,
+    settingsUpdate,
     clearCategoryUpdates,
-  } = useAiParser();
-  const { categories, refetch: refetchCategories } = useCategories();
-  const { createInvestment, investments, updateInvestment } = useInvestments();
-  const currency = useSettingsStore((state) => state.currency);
+    clearInvestmentUpdates,
+    clearSettingsUpdate,
+  } = useAiParser(user?.id ?? 'anonymous');
+  const {
+    categories,
+    createCategory,
+    updateCategory,
+    deleteCategory,
+    refetch: refetchCategories,
+  } = useCategories();
+  const {
+    createInvestment,
+    investments,
+    updateInvestment,
+    deleteInvestment,
+  } = useInvestments();
+  const {
+    currency,
+    salaryDay,
+    language,
+    geminiModel,
+    setSalaryDay,
+    setCurrency,
+    setLanguage,
+    setGeminiModel,
+    setGeminiApiKey,
+  } = useSettingsStore(
+    useShallow((state) => ({
+      currency: state.currency,
+      salaryDay: state.salaryDay,
+      language: state.language,
+      geminiModel: state.geminiModel,
+      setSalaryDay: state.setSalaryDay,
+      setCurrency: state.setCurrency,
+      setLanguage: state.setLanguage,
+      setGeminiModel: state.setGeminiModel,
+      setGeminiApiKey: state.setGeminiApiKey,
+    })),
+  );
   const getEffectiveApiKey = useSettingsStore((state) => state.getEffectiveApiKey);
 
   const [inputText, setInputText] = useState('');
+  const [attachment, setAttachment] = useState<ChatAttachment | null>(null);
   const [savingMessageId, setSavingMessageId] = useState<string | null>(null);
   const [isApplyingCategoryUpdate, setIsApplyingCategoryUpdate] = useState(false);
+  const [isApplyingInvestmentUpdate, setIsApplyingInvestmentUpdate] = useState(false);
+  const [isApplyingSettingsUpdate, setIsApplyingSettingsUpdate] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const hasApiKey = getEffectiveApiKey().length > 0;
   const categoryNames = categories.map((category) => category.category_name);
+  const investmentNames = investments.map((investment) => investment.investment_name);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -83,11 +140,25 @@ function ChatPage(): ReactElement {
 
   const handleSend = useCallback(async (): Promise<void> => {
     const trimmedText = inputText.trim();
-    if (!trimmedText || isParsing) return;
+    if ((!trimmedText && !attachment) || isParsing) return;
 
     setInputText('');
-    await sendMessage(trimmedText, categoryNames);
-  }, [inputText, isParsing, sendMessage, categoryNames]);
+    await sendMessage(trimmedText || 'Đọc giúp ảnh đính kèm và trích xuất dữ liệu đầu tư.', {
+      existingCategories: categoryNames,
+      existingInvestments: investmentNames,
+      settings: {
+        salaryDay,
+        currency,
+        language,
+        geminiModel,
+      },
+      account: {
+        userId: user?.id ?? 'anonymous',
+        label: user?.email ?? user?.user_metadata?.full_name ?? 'Unknown account',
+      },
+    }, attachment);
+    setAttachment(null);
+  }, [inputText, attachment, isParsing, sendMessage, categoryNames, investmentNames, salaryDay, currency, language, geminiModel, user]);
 
   const handleKeyDown = useCallback(
     (event: React.KeyboardEvent): void => {
@@ -119,6 +190,11 @@ function ChatPage(): ReactElement {
             investmentName: parsed.investmentName,
             categoryId: matchedCategory.id,
             amount: parsed.amount,
+            trackingType: parsed.trackingType ?? 'none',
+            tickerSymbol: parsed.tickerSymbol ?? null,
+            quantity: parsed.quantity ?? null,
+            purchaseUnitPrice: parsed.purchaseUnitPrice ?? null,
+            purchaseDate: parsed.purchaseDate ?? null,
             note: parsed.note,
           });
         }
@@ -136,14 +212,65 @@ function ChatPage(): ReactElement {
     [categories, createInvestment, confirmParsedInvestments, t, savingMessageId],
   );
 
-  // Handle AI-initiated category updates (reassign investments to correct categories)
   const handleApplyCategoryUpdates = useCallback(async (): Promise<void> => {
     if (!categoryUpdates || isApplyingCategoryUpdate) return;
 
     setIsApplyingCategoryUpdate(true);
 
     try {
-      await applyCategoryReassignments(categoryUpdates, categories, investments, updateInvestment);
+      for (const categoryUpdate of categoryUpdates) {
+        if (categoryUpdate.type === 'create' && categoryUpdate.categoryName) {
+          const existingCategory = findCategoryByName(categories, categoryUpdate.categoryName);
+          if (!existingCategory) {
+            await createCategory({
+              categoryName: categoryUpdate.categoryName,
+              icon: categoryUpdate.icon ?? '📂',
+              color: categoryUpdate.color ?? '#6366f1',
+              targetAmount: categoryUpdate.targetAmount ?? null,
+            });
+          }
+          continue;
+        }
+
+        if (categoryUpdate.type === 'delete' && categoryUpdate.categoryName) {
+          const targetCategory = findCategoryByName(categories, categoryUpdate.categoryName);
+          if (targetCategory) {
+            await deleteCategory(targetCategory.id);
+          }
+          continue;
+        }
+
+        if ((categoryUpdate.type === 'rename' || categoryUpdate.type === 'update')) {
+          const targetCategory = findCategoryByName(
+            categories,
+            categoryUpdate.categoryName ?? categoryUpdate.fromCategory,
+          );
+          if (targetCategory) {
+            await updateCategory(targetCategory.id, {
+              categoryName: categoryUpdate.newCategoryName ?? categoryUpdate.toCategory,
+              icon: categoryUpdate.icon,
+              color: categoryUpdate.color,
+              targetAmount: categoryUpdate.targetAmount,
+            });
+          }
+          continue;
+        }
+
+        if (categoryUpdate.type === 'reassign' && categoryUpdate.investmentNames) {
+          const targetCategory = findCategoryByName(categories, categoryUpdate.toCategory);
+          if (!targetCategory) continue;
+
+          for (const investmentName of categoryUpdate.investmentNames) {
+            const matchingInvestment = findInvestmentByName(investments, investmentName);
+            if (matchingInvestment) {
+              await updateInvestment(matchingInvestment.id, {
+                categoryId: targetCategory.id,
+              });
+            }
+          }
+        }
+      }
+
       await refetchCategories();
       clearCategoryUpdates();
       message.success('Đã cập nhật danh mục thành công!');
@@ -154,16 +281,131 @@ function ChatPage(): ReactElement {
     } finally {
       setIsApplyingCategoryUpdate(false);
     }
-  }, [categoryUpdates, categories, investments, updateInvestment, refetchCategories, clearCategoryUpdates, isApplyingCategoryUpdate]);
+  }, [
+    categoryUpdates,
+    categories,
+    investments,
+    updateInvestment,
+    refetchCategories,
+    clearCategoryUpdates,
+    isApplyingCategoryUpdate,
+    createCategory,
+    deleteCategory,
+    updateCategory,
+  ]);
 
-  // Auto-trigger category update when AI suggests it
-  useEffect(() => {
-    if (categoryUpdates && categoryUpdates.length > 0) {
-      // Don't auto-apply, show the button in the UI
+  const handleApplyInvestmentUpdates = useCallback(async (): Promise<void> => {
+    if (!investmentUpdates || isApplyingInvestmentUpdate) return;
+
+    setIsApplyingInvestmentUpdate(true);
+
+    try {
+      for (const investmentUpdate of investmentUpdates) {
+        if (investmentUpdate.type === 'create') {
+          const targetCategory = findCategoryByName(categories, investmentUpdate.categoryName);
+          if (!targetCategory || investmentUpdate.amount === undefined) continue;
+
+          await createInvestment({
+            investmentName: investmentUpdate.investmentName,
+            categoryId: targetCategory.id,
+            amount: investmentUpdate.amount,
+            targetAmount: investmentUpdate.targetAmount ?? null,
+            includeInTotal: investmentUpdate.includeInTotal ?? true,
+            trackingType: investmentUpdate.trackingType ?? 'none',
+            tickerSymbol: investmentUpdate.tickerSymbol ?? null,
+            quantity: investmentUpdate.quantity ?? null,
+            purchaseUnitPrice: investmentUpdate.purchaseUnitPrice ?? null,
+            purchaseDate: investmentUpdate.purchaseDate ?? null,
+            note: investmentUpdate.note,
+          });
+          continue;
+        }
+
+        const existingInvestment = findInvestmentByName(investments, investmentUpdate.investmentName);
+        if (!existingInvestment) continue;
+
+        if (investmentUpdate.type === 'delete') {
+          await deleteInvestment(existingInvestment.id);
+          continue;
+        }
+
+        const targetCategory = findCategoryByName(categories, investmentUpdate.categoryName);
+        await updateInvestment(existingInvestment.id, {
+          investmentName: investmentUpdate.newInvestmentName,
+          categoryId: targetCategory?.id,
+          amount: investmentUpdate.amount,
+          targetAmount: investmentUpdate.targetAmount,
+          includeInTotal: investmentUpdate.includeInTotal,
+          trackingType: investmentUpdate.trackingType,
+          tickerSymbol: investmentUpdate.tickerSymbol,
+          quantity: investmentUpdate.quantity,
+          purchaseUnitPrice: investmentUpdate.purchaseUnitPrice,
+          purchaseDate: investmentUpdate.purchaseDate,
+          note: investmentUpdate.note,
+        });
+      }
+
+      clearInvestmentUpdates();
+      message.success('Đã cập nhật khoản đầu tư thành công!');
+    } catch (error) {
+      if (error instanceof Error) {
+        message.error(error.message);
+      }
+    } finally {
+      setIsApplyingInvestmentUpdate(false);
     }
-  }, [categoryUpdates]);
+  }, [
+    categories,
+    clearInvestmentUpdates,
+    createInvestment,
+    deleteInvestment,
+    investmentUpdates,
+    investments,
+    isApplyingInvestmentUpdate,
+    updateInvestment,
+  ]);
+
+  const handleApplySettingsUpdate = useCallback(async (): Promise<void> => {
+    if (!settingsUpdate || isApplyingSettingsUpdate) return;
+
+    setIsApplyingSettingsUpdate(true);
+
+    try {
+      if (settingsUpdate.salaryDay !== undefined) {
+        setSalaryDay(settingsUpdate.salaryDay);
+      }
+      if (settingsUpdate.currency !== undefined) {
+        setCurrency(settingsUpdate.currency);
+      }
+      if (settingsUpdate.language !== undefined) {
+        setLanguage(settingsUpdate.language);
+        i18n.changeLanguage(settingsUpdate.language);
+      }
+      if (settingsUpdate.geminiModel !== undefined) {
+        setGeminiModel(settingsUpdate.geminiModel);
+      }
+      if (settingsUpdate.geminiApiKey !== undefined) {
+        setGeminiApiKey(settingsUpdate.geminiApiKey);
+      }
+
+      clearSettingsUpdate();
+      message.success('Đã cập nhật cài đặt thành công!');
+    } finally {
+      setIsApplyingSettingsUpdate(false);
+    }
+  }, [
+    clearSettingsUpdate,
+    isApplyingSettingsUpdate,
+    setCurrency,
+    setGeminiApiKey,
+    setGeminiModel,
+    setLanguage,
+    setSalaryDay,
+    settingsUpdate,
+  ]);
 
   const hasMessages = messages.length > 0;
+  const accountLabel = user?.email ?? user?.user_metadata?.full_name ?? 'Unknown account';
 
   return (
     <div className={styles.chatContainer}>
@@ -174,6 +416,11 @@ function ChatPage(): ReactElement {
             Clear
           </Button>
         )}
+      </div>
+
+      <div className={styles.accountBanner}>
+        <span>Account hiện tại: <strong>{accountLabel}</strong></span>
+        <span>AI chỉ dùng dữ liệu danh mục và đầu tư của account này.</span>
       </div>
 
       {!hasApiKey && (
@@ -193,9 +440,7 @@ function ChatPage(): ReactElement {
       {categoryUpdates && categoryUpdates.length > 0 && (
         <div className={styles.categoryUpdateBanner}>
           <span>
-            🔄 AI đề xuất chuyển danh mục cho {categoryUpdates.reduce(
-              (total, update) => total + (update.investmentNames?.length ?? 0), 0
-            )} khoản đầu tư
+            🔄 AI đã chuẩn bị {categoryUpdates.length} thay đổi cho danh mục và phân loại
           </span>
           <Button
             type="primary"
@@ -209,12 +454,43 @@ function ChatPage(): ReactElement {
         </div>
       )}
 
+      {investmentUpdates && investmentUpdates.length > 0 && (
+        <div className={styles.categoryUpdateBanner}>
+          <span>🧾 AI đã chuẩn bị {investmentUpdates.length} thay đổi cho khoản đầu tư</span>
+          <Button
+            type="primary"
+            size="small"
+            icon={<SwapOutlined />}
+            onClick={handleApplyInvestmentUpdates}
+            loading={isApplyingInvestmentUpdate}
+          >
+            Áp dụng
+          </Button>
+        </div>
+      )}
+
+      {settingsUpdate && (
+        <div className={styles.categoryUpdateBanner}>
+          <span>⚙️ AI đã chuẩn bị cập nhật cài đặt trong app</span>
+          <Button
+            type="primary"
+            size="small"
+            icon={<SwapOutlined />}
+            onClick={handleApplySettingsUpdate}
+            loading={isApplyingSettingsUpdate}
+          >
+            Áp dụng
+          </Button>
+        </div>
+      )}
+
       <div className={styles.chatMessages}>
         {!hasMessages && (
           <div className={styles.welcomeMessage}>
             <div className={styles.welcomeIcon}>🤖</div>
             <p className={styles.welcomeText}>{t('chat.welcome')}</p>
             <p className={styles.exampleHint}>{t('chat.example')}</p>
+            <p className={styles.exampleHint}>{t('chat.trackingPrompt')}</p>
           </div>
         )}
 
@@ -244,6 +520,29 @@ function ChatPage(): ReactElement {
       </div>
 
       <div className={styles.chatInputArea}>
+        <input
+          id="chat-attachment-input"
+          type="file"
+          accept="image/*"
+          className={styles.hiddenFileInput}
+          onChange={async (event) => {
+            const file = event.target.files?.[0];
+            if (!file) return;
+            try {
+              setAttachment(await fileToAttachment(file));
+            } catch (error) {
+              message.error(error instanceof Error ? error.message : 'Không thể đọc file ảnh');
+            } finally {
+              event.target.value = '';
+            }
+          }}
+        />
+        <Button
+          icon={<PaperClipOutlined />}
+          onClick={() => document.getElementById('chat-attachment-input')?.click()}
+          className={styles.attachButton}
+          title="Đính kèm ảnh"
+        />
         <Input.TextArea
           value={inputText}
           onChange={(event) => setInputText(event.target.value)}
@@ -258,10 +557,16 @@ function ChatPage(): ReactElement {
           icon={<SendOutlined />}
           onClick={handleSend}
           loading={isParsing}
-          disabled={!hasApiKey || !inputText.trim()}
+          disabled={!hasApiKey || (!inputText.trim() && !attachment)}
           className={styles.sendButton}
         />
       </div>
+      {attachment && (
+        <div className={styles.attachmentBadge}>
+          <span>Ảnh đính kèm: {attachment.name}</span>
+          <Button size="small" type="text" onClick={() => setAttachment(null)}>Bỏ</Button>
+        </div>
+      )}
     </div>
   );
 }
@@ -280,7 +585,12 @@ function MessageBubble({ chatMessage, onConfirm, currency, isSaving }: MessageBu
   if (isUser) {
     return (
       <div className={styles.messageRowUser}>
-        <div className={styles.messageBubbleUser}>{chatMessage.content}</div>
+        <div className={styles.messageBubbleUser}>
+          <div>{chatMessage.content}</div>
+          {chatMessage.attachmentName && (
+            <div className={styles.attachmentHint}>Ảnh: {chatMessage.attachmentName}</div>
+          )}
+        </div>
       </div>
     );
   }
@@ -306,6 +616,13 @@ function MessageBubble({ chatMessage, onConfirm, currency, isSaving }: MessageBu
                   <div>
                     <div className={styles.parsedItemName}>{parsed.investmentName}</div>
                     <div className={styles.parsedItemCategory}>{parsed.categoryName}</div>
+                    {(parsed.tickerSymbol || parsed.quantity || parsed.purchaseUnitPrice) && (
+                      <div className={styles.parsedItemCategory}>
+                        {[parsed.tickerSymbol, parsed.quantity, parsed.purchaseUnitPrice]
+                          .filter((value) => value !== undefined)
+                          .join(' · ')}
+                      </div>
+                    )}
                   </div>
                   <div className={styles.parsedItemAmount}>
                     {formatCurrency(parsed.amount, currency)}

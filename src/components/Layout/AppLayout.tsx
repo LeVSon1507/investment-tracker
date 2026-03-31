@@ -1,17 +1,18 @@
-import { type ReactElement, useMemo } from 'react';
-import { Layout, Menu, Avatar, Button, Space } from 'antd';
+import { type ReactElement, useMemo } from "react";
+import { Layout, Menu, Avatar, Button, Space } from "antd";
 import {
   DashboardOutlined,
   FundOutlined,
   RobotOutlined,
   SettingOutlined,
   LogoutOutlined,
-} from '@ant-design/icons';
-import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
-import { useAuth } from '../../hooks/useAuth';
-import { useSalaryReminder } from '../../hooks/useSalaryReminder';
-import styles from './AppLayout.module.css';
+  LineChartOutlined,
+} from "@ant-design/icons";
+import { Outlet, useNavigate, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { useAuth } from "../../hooks/useAuth";
+import { useSalaryReminder } from "../../hooks/useSalaryReminder";
+import styles from "./AppLayout.module.css";
 
 const { Sider, Content } = Layout;
 
@@ -25,31 +26,37 @@ function AppLayout(): ReactElement {
   const menuItems = useMemo(
     () => [
       {
-        key: '/',
+        key: "/",
         icon: <DashboardOutlined />,
-        label: t('nav.dashboard'),
+        label: t("nav.dashboard"),
       },
       {
-        key: '/investments',
+        key: "/investments",
         icon: <FundOutlined />,
-        label: t('nav.investments'),
+        label: t("nav.investments"),
       },
       {
-        key: '/chat',
+        key: "/market",
+        icon: <LineChartOutlined />,
+        label: t("nav.market"),
+      },
+      {
+        key: "/chat",
         icon: <RobotOutlined />,
-        label: t('nav.chat'),
+        label: t("nav.chat"),
       },
       {
-        key: '/settings',
+        key: "/settings",
         icon: <SettingOutlined />,
-        label: t('nav.settings'),
+        label: t("nav.settings"),
       },
     ],
     [t],
   );
 
-  const displayName = user?.user_metadata?.full_name ?? user?.email?.split('@')[0] ?? 'User';
-  const displayEmail = user?.email ?? '';
+  const displayName =
+    user?.user_metadata?.full_name ?? user?.email?.split("@")[0] ?? "User";
+  const displayEmail = user?.email ?? "";
   const avatarUrl = user?.user_metadata?.avatar_url as string | undefined;
 
   function handleMenuClick(info: { key: string }): void {
@@ -61,7 +68,7 @@ function AppLayout(): ReactElement {
   }
 
   function handleAllocateNow(): void {
-    navigate('/chat');
+    navigate("/chat");
     dismissReminder();
   }
 
@@ -74,9 +81,9 @@ function AppLayout(): ReactElement {
         collapsedWidth={0}
       >
         <div className={styles.sidebarInner}>
-          <div className={styles.logo} onClick={() => navigate('/')}>
+          <div className={styles.logo} onClick={() => navigate("/")}>
             <div className={styles.logoIcon}>IT</div>
-            <span className={styles.logoText}>{t('app.name')}</span>
+            <span className={styles.logoText}>{t("app.name")}</span>
           </div>
 
           <Menu
@@ -93,7 +100,7 @@ function AppLayout(): ReactElement {
                 src={avatarUrl}
                 size={36}
                 className={styles.userAvatar}
-                style={{ backgroundColor: 'var(--accent-primary)' }}
+                style={{ backgroundColor: "var(--accent-primary)" }}
               >
                 {displayName[0]?.toUpperCase()}
               </Avatar>
@@ -108,7 +115,7 @@ function AppLayout(): ReactElement {
               className={styles.logoutButton}
               size="small"
             >
-              {t('nav.logout')}
+              {t("nav.logout")}
             </Button>
           </div>
         </div>
@@ -118,14 +125,18 @@ function AppLayout(): ReactElement {
         {shouldShowReminder && (
           <div className={styles.salaryBanner}>
             <div className={styles.salaryBannerText}>
-              <span className={styles.salaryBannerTitle}>{t('salary.reminderTitle')}</span>
-              <span className={styles.salaryBannerMessage}>{t('salary.reminderMessage')}</span>
+              <span className={styles.salaryBannerTitle}>
+                {t("salary.reminderTitle")}
+              </span>
+              <span className={styles.salaryBannerMessage}>
+                {t("salary.reminderMessage")}
+              </span>
             </div>
             <Space>
               <Button type="primary" onClick={handleAllocateNow}>
-                {t('salary.allocateNow')}
+                {t("salary.allocateNow")}
               </Button>
-              <Button onClick={dismissReminder}>{t('salary.dismiss')}</Button>
+              <Button onClick={dismissReminder}>{t("salary.dismiss")}</Button>
             </Space>
           </div>
         )}
@@ -138,7 +149,7 @@ function AppLayout(): ReactElement {
           {menuItems.map((navItem) => (
             <li
               key={navItem.key}
-              className={`${styles.mobileNavItem} ${location.pathname === navItem.key ? styles.mobileNavItemActive : ''}`}
+              className={`${styles.mobileNavItem} ${location.pathname === navItem.key ? styles.mobileNavItemActive : ""}`}
               onClick={() => navigate(navItem.key)}
             >
               <span className={styles.mobileNavIcon}>{navItem.icon}</span>

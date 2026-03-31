@@ -1,20 +1,33 @@
-import { type ReactElement, useMemo } from 'react';
-import { Progress } from 'antd';
+import { type ReactElement, useMemo } from "react";
+import { Progress, Button } from "antd";
 import {
   FundOutlined,
   AppstoreOutlined,
   RiseOutlined,
   TrophyOutlined,
-} from '@ant-design/icons';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
-import { useTranslation } from 'react-i18next';
-import { useShallow } from 'zustand/shallow';
-import { useInvestments } from '../../hooks/useInvestments';
-import { useCategories } from '../../hooks/useCategories';
-import { useSettingsStore } from '../../stores/settingsStore';
-import { formatCurrency, formatCompactCurrency } from '../../utils/formatCurrency';
-import type { Currency } from '../../types/investment';
-import styles from './Dashboard.module.css';
+  ReloadOutlined,
+} from "@ant-design/icons";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  ResponsiveContainer,
+  Tooltip,
+  Legend,
+} from "recharts";
+import { useTranslation } from "react-i18next";
+import { useShallow } from "zustand/shallow";
+import { useInvestments } from "../../hooks/useInvestments";
+import { useCategories } from "../../hooks/useCategories";
+import { useMarketData } from "../../hooks/useMarketData";
+import { useSettingsStore } from "../../stores/settingsStore";
+import {
+  formatCurrency,
+  formatCompactCurrency,
+} from "../../utils/formatCurrency";
+import { findLiveUnitPrice, normalizeTickerSymbol } from "../../lib/marketData";
+import type { Currency } from "../../types/investment";
+import styles from "./Dashboard.module.css";
 
 type CategorySummary = {
   categoryName: string;
@@ -29,6 +42,21 @@ function DashboardPage(): ReactElement {
   const { investments, totalAmount } = useInvestments();
   const { categories } = useCategories();
   const currency = useSettingsStore(useShallow((state) => state.currency));
+  const {
+    marketOverview,
+    isLoading: isMarketLoading,
+    error: marketError,
+    refetch: refetchMarket,
+  } = useMarketData(
+    useMemo(
+      () =>
+        investments.map(
+          (investment) =>
+            investment.ticker_symbol ?? investment.investment_name,
+        ),
+      [investments],
+    ),
+  );
 
   const categorySummaries = useMemo((): CategorySummary[] => {
     const summaryMap = new Map<string, CategorySummary>();
@@ -68,7 +96,9 @@ function DashboardPage(): ReactElement {
   );
 
   const largestInvestment = useMemo(() => {
-    const includedInvestments = investments.filter((investment) => investment.include_in_total);
+    const includedInvestments = investments.filter(
+      (investment) => investment.include_in_total,
+    );
     if (includedInvestments.length === 0) return null;
     return includedInvestments.reduce((largest, current) =>
       current.amount > largest.amount ? current : largest,
@@ -76,35 +106,159 @@ function DashboardPage(): ReactElement {
   }, [investments]);
 
   const hasData = investments.length > 0;
+  const portfolioStats = useMemo(() => {
+    const positions = investments.map((investment) => {
+      const liveUnitPrice = findLiveUnitPrice(
+        investment.tracking_type,
+        investment.ticker_symbol,
+        investment.investment_name,
+        marketOverview,
+      );
+      const hasQuantity =
+        investment.quantity !== null && investment.quantity > 0;
+      const costBasis =
+        hasQuantity && investment.purchase_unit_price !== null
+          ? Number(investment.quantity) * investment.purchase_unit_price
+          : investment.amount;
+      const currentValue =
+        hasQuantity && liveUnitPrice !== null
+          ? Number(investment.quantity) * liveUnitPrice
+          : investment.amount;
+      const profitLoss = currentValue - costBasis;
+
+      return {
+        id: investment.id,
+        investmentName: investment.investment_name,
+        tickerSymbol: normalizeTickerSymbol(investment.ticker_symbol),
+        trackingType: investment.tracking_type,
+        quantity: investment.quantity,
+        liveUnitPrice,
+        currentValue,
+        costBasis,
+        profitLoss,
+      };
+    });
+    const trackedPositions = positions
+      .filter((position) => position.trackingType !== "none")
+      .sort((a, b) => b.currentValue - a.currentValue);
+    const currentMarketValue = positions.reduce(
+      (sum, position) => sum + position.currentValue,
+      0,
+    );
+    const totalCostBasis = positions.reduce(
+      (sum, position) => sum + position.costBasis,
+      0,
+    );
+
+    return {
+      currentMarketValue,
+      totalCostBasis,
+      totalProfitLoss: currentMarketValue - totalCostBasis,
+      trackedPositions,
+    };
+  }, [investments, marketOverview]);
+  const goldCategoryIds = useMemo(
+    () =>
+      categories
+        .filter((category) =>
+          category.category_name.toLowerCase().includes("vàng"),
+        )
+        .map((category) => category.id),
+    [categories],
+  );
+  const stockCategoryIds = useMemo(
+    () =>
+      categories
+        .filter(
+          (category) =>
+            category.category_name.toLowerCase().includes("chứng khoán") ||
+            category.category_name.toLowerCase().includes("stocks"),
+        )
+        .map((category) => category.id),
+    [categories],
+  );
+  const trackedGoldNames = useMemo(
+    () =>
+      new Set(
+        investments
+          .filter(
+            (investment) =>
+              investment.category_id &&
+              goldCategoryIds.includes(investment.category_id),
+          )
+          .map((investment) => investment.investment_name.toLowerCase()),
+      ),
+    [goldCategoryIds, investments],
+  );
+  const featuredGoldPrices = useMemo(
+    () =>
+      (marketOverview?.goldPrices ?? [])
+        .filter(
+          (item) =>
+            trackedGoldNames.size === 0 ||
+            trackedGoldNames.has(item.productName.toLowerCase()),
+        )
+        .slice(0, 5),
+    [marketOverview, trackedGoldNames],
+  );
+  const stockInvestments = useMemo(
+    () =>
+      investments.filter(
+        (investment) =>
+          investment.category_id &&
+          stockCategoryIds.includes(investment.category_id),
+      ),
+    [investments, stockCategoryIds],
+  );
+  const stockQuotes = marketOverview?.stockQuotes ?? [];
 
   return (
     <div className={styles.dashboardGrid}>
-      <h1 className={styles.pageTitle}>{t('dashboard.title')}</h1>
+      <h1 className={styles.pageTitle}>{t("dashboard.title")}</h1>
 
       <div className={styles.summaryRow}>
         <SummaryCard
-          label={t('dashboard.totalAssets')}
-          value={formatCurrency(totalAmount, currency)}
+          label={t("dashboard.totalAssets")}
+          value={formatCurrency(
+            portfolioStats.currentMarketValue || totalAmount,
+            currency,
+          )}
           icon={<FundOutlined />}
           isAccent
         />
         <SummaryCard
-          label={t('dashboard.totalCategories')}
+          label={t("dashboard.totalCategories")}
           value={String(categorySummaries.length)}
           icon={<AppstoreOutlined />}
         />
         <SummaryCard
-          label={t('dashboard.totalInvestments')}
+          label={t("dashboard.totalInvestments")}
           value={String(investments.length)}
           icon={<RiseOutlined />}
         />
         <SummaryCard
-          label={t('dashboard.largestInvestment')}
+          label={t("dashboard.largestInvestment")}
           value={
             largestInvestment
               ? formatCompactCurrency(largestInvestment.amount, currency)
-              : '—'
+              : "—"
           }
+          icon={<TrophyOutlined />}
+        />
+      </div>
+
+      <div className={styles.summaryRow}>
+        <SummaryCard
+          label="Giá vốn"
+          value={formatCurrency(
+            portfolioStats.totalCostBasis || totalAmount,
+            currency,
+          )}
+          icon={<RiseOutlined />}
+        />
+        <SummaryCard
+          label="Lãi/Lỗ tạm tính"
+          value={formatCurrency(portfolioStats.totalProfitLoss, currency)}
           icon={<TrophyOutlined />}
         />
       </div>
@@ -112,14 +266,14 @@ function DashboardPage(): ReactElement {
       {!hasData && (
         <div className={`glass-card ${styles.emptyState}`}>
           <div className={styles.emptyIcon}>📊</div>
-          <p className={styles.emptyText}>{t('dashboard.noData')}</p>
+          <p className={styles.emptyText}>{t("dashboard.noData")}</p>
         </div>
       )}
 
       {hasData && (
         <div className={styles.chartsRow}>
           <div className={`glass-card ${styles.chartCard}`}>
-            <h3 className={styles.chartTitle}>{t('dashboard.allocation')}</h3>
+            <h3 className={styles.chartTitle}>{t("dashboard.allocation")}</h3>
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
@@ -138,15 +292,17 @@ function DashboardPage(): ReactElement {
                 <Tooltip
                   formatter={(value) => formatCurrency(Number(value), currency)}
                   contentStyle={{
-                    background: 'var(--bg-secondary)',
-                    border: '1px solid var(--border-subtle)',
-                    borderRadius: 'var(--radius-md)',
-                    color: 'var(--text-primary)',
+                    background: "var(--bg-secondary)",
+                    border: "1px solid var(--border-subtle)",
+                    borderRadius: "var(--radius-md)",
+                    color: "var(--text-primary)",
                   }}
                 />
                 <Legend
                   formatter={(value: string) => (
-                    <span style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
+                    <span
+                      style={{ color: "var(--text-secondary)", fontSize: 13 }}
+                    >
                       {value}
                     </span>
                   )}
@@ -156,7 +312,9 @@ function DashboardPage(): ReactElement {
           </div>
 
           <div className={`glass-card ${styles.chartCard}`}>
-            <h3 className={styles.chartTitle}>{t('dashboard.categoryProgress')}</h3>
+            <h3 className={styles.chartTitle}>
+              {t("dashboard.categoryProgress")}
+            </h3>
             <CategoryProgressList
               summaries={categorySummaries}
               currency={currency}
@@ -164,6 +322,101 @@ function DashboardPage(): ReactElement {
           </div>
         </div>
       )}
+
+      <div className={styles.marketSection}>
+        <div className={`glass-card ${styles.marketCard}`}>
+          <div className={styles.marketHeader}>
+            <div>
+              <h3 className={styles.chartTitle}>Cổ phiếu Việt Nam live</h3>
+              <div className={styles.marketMeta}>
+                {stockInvestments.length} khoản chứng khoán đang được theo dõi
+              </div>
+            </div>
+          </div>
+          <div className={styles.marketList}>
+            {stockQuotes.map((quote) => (
+              <div key={quote.symbol} className={styles.marketRow}>
+                <div>
+                  <div className={styles.marketName}>{quote.symbol}</div>
+                  <div className={styles.marketMeta}>{quote.source}</div>
+                </div>
+                <div className={styles.marketPriceGroup}>
+                  <span>{formatCompactCurrency(quote.price, currency)}</span>
+                  <span
+                    className={
+                      quote.change !== null && quote.change >= 0
+                        ? styles.marketUp
+                        : styles.marketDown
+                    }
+                  >
+                    {quote.changePercent !== null
+                      ? `${quote.changePercent.toFixed(2)}%`
+                      : "—"}
+                  </span>
+                </div>
+              </div>
+            ))}
+            {stockQuotes.length === 0 && (
+              <div className={styles.marketEmpty}>
+                Chưa tách được mã cổ phiếu từ tên khoản đầu tư, hoặc nguồn giá
+                đang không phản hồi.
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className={`glass-card ${styles.marketCard}`}>
+          <div className={styles.marketHeader}>
+            <div>
+              <h3 className={styles.chartTitle}>So sánh giá trị thực tế</h3>
+              <div className={styles.marketMeta}>
+                Dựa trên số lượng, giá mua và giá thị trường hiện tại
+              </div>
+            </div>
+          </div>
+          <div className={styles.marketList}>
+            {portfolioStats.trackedPositions.map((position) => (
+              <div key={position.id} className={styles.positionRow}>
+                <div>
+                  <div className={styles.marketName}>
+                    {position.investmentName}{" "}
+                    {position.tickerSymbol ? `(${position.tickerSymbol})` : ""}
+                  </div>
+                  <div className={styles.marketMeta}>
+                    Giá vốn:{" "}
+                    {formatCompactCurrency(position.costBasis, currency)}
+                    {" · "}
+                    Hiện tại:{" "}
+                    {formatCompactCurrency(position.currentValue, currency)}
+                  </div>
+                </div>
+                <div className={styles.marketPriceGroup}>
+                  <span>
+                    {position.liveUnitPrice !== null
+                      ? formatCompactCurrency(position.liveUnitPrice, currency)
+                      : "—"}
+                  </span>
+                  <span
+                    className={
+                      position.profitLoss >= 0
+                        ? styles.marketUp
+                        : styles.marketDown
+                    }
+                  >
+                    {formatCompactCurrency(position.profitLoss, currency)}
+                  </span>
+                </div>
+              </div>
+            ))}
+            {portfolioStats.trackedPositions.length === 0 && (
+              <div className={styles.marketEmpty}>
+                Hãy thêm mã tài sản, số lượng và giá mua trong khoản đầu tư để
+                app tính giá trị thực tế.
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -175,12 +428,19 @@ type SummaryCardProps = {
   isAccent?: boolean;
 };
 
-function SummaryCard({ label, value, icon, isAccent }: SummaryCardProps): ReactElement {
+function SummaryCard({
+  label,
+  value,
+  icon,
+  isAccent,
+}: SummaryCardProps): ReactElement {
   return (
     <div className={`glass-card ${styles.summaryCard}`}>
       <div className={styles.summaryIcon}>{icon}</div>
       <div className={styles.summaryLabel}>{label}</div>
-      <div className={isAccent ? styles.summaryValueAccent : styles.summaryValue}>
+      <div
+        className={isAccent ? styles.summaryValueAccent : styles.summaryValue}
+      >
         {value}
       </div>
     </div>
@@ -201,11 +461,13 @@ function CategoryProgressList({
   return (
     <div className={styles.progressList}>
       {summaries.map((summary) => {
-        const hasTarget = summary.targetAmount !== null && summary.targetAmount > 0;
+        const hasTarget =
+          summary.targetAmount !== null && summary.targetAmount > 0;
         const percentage = hasTarget
           ? Math.min((summary.currentAmount / summary.targetAmount!) * 100, 100)
           : 0;
-        const isExceeded = hasTarget && summary.currentAmount > summary.targetAmount!;
+        const isExceeded =
+          hasTarget && summary.currentAmount > summary.targetAmount!;
 
         return (
           <div key={summary.categoryName} className={styles.progressItem}>
@@ -222,7 +484,7 @@ function CategoryProgressList({
               <>
                 <Progress
                   percent={percentage}
-                  strokeColor={isExceeded ? 'var(--warning)' : summary.color}
+                  strokeColor={isExceeded ? "var(--warning)" : summary.color}
                   trailColor="rgba(255,255,255,0.06)"
                   showInfo={false}
                   size="small"
@@ -230,14 +492,17 @@ function CategoryProgressList({
                 <div className={styles.progressTarget}>
                   {isExceeded && (
                     <span className={styles.exceededBadge}>
-                      {t('dashboard.exceeded')}{' '}
+                      {t("dashboard.exceeded")}{" "}
                     </span>
                   )}
-                  {t('dashboard.target')}: {formatCompactCurrency(summary.targetAmount!, currency)}
+                  {t("dashboard.target")}:{" "}
+                  {formatCompactCurrency(summary.targetAmount!, currency)}
                 </div>
               </>
             ) : (
-              <div className={styles.progressTarget}>{t('dashboard.noTarget')}</div>
+              <div className={styles.progressTarget}>
+                {t("dashboard.noTarget")}
+              </div>
             )}
           </div>
         );

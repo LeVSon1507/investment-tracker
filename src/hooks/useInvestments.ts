@@ -60,6 +60,11 @@ export function useInvestments(): UseInvestmentsReturn {
         amount: input.amount,
         target_amount: input.targetAmount ?? null,
         include_in_total: input.includeInTotal ?? true,
+        tracking_type: input.trackingType ?? 'none',
+        ticker_symbol: input.tickerSymbol ?? null,
+        quantity: input.quantity ?? null,
+        purchase_unit_price: input.purchaseUnitPrice ?? null,
+        purchase_date: input.purchaseDate ?? null,
         note: input.note ?? null,
         invested_at: input.investedAt ?? new Date().toISOString().split('T')[0],
       });
@@ -81,6 +86,11 @@ export function useInvestments(): UseInvestmentsReturn {
       if (input.amount !== undefined) updatePayload.amount = input.amount;
       if (input.targetAmount !== undefined) updatePayload.target_amount = input.targetAmount;
       if (input.includeInTotal !== undefined) updatePayload.include_in_total = input.includeInTotal;
+      if (input.trackingType !== undefined) updatePayload.tracking_type = input.trackingType;
+      if (input.tickerSymbol !== undefined) updatePayload.ticker_symbol = input.tickerSymbol;
+      if (input.quantity !== undefined) updatePayload.quantity = input.quantity;
+      if (input.purchaseUnitPrice !== undefined) updatePayload.purchase_unit_price = input.purchaseUnitPrice;
+      if (input.purchaseDate !== undefined) updatePayload.purchase_date = input.purchaseDate;
       if (input.note !== undefined) updatePayload.note = input.note;
       if (input.investedAt !== undefined) updatePayload.invested_at = input.investedAt;
       updatePayload.updated_at = new Date().toISOString();
