@@ -1,11 +1,10 @@
 import { type ReactElement, useMemo } from "react";
-import { Progress, Button } from "antd";
+import { Progress } from "antd";
 import {
   FundOutlined,
   AppstoreOutlined,
   RiseOutlined,
   TrophyOutlined,
-  ReloadOutlined,
 } from "@ant-design/icons";
 import {
   PieChart,
@@ -44,9 +43,6 @@ function DashboardPage(): ReactElement {
   const currency = useSettingsStore(useShallow((state) => state.currency));
   const {
     marketOverview,
-    isLoading: isMarketLoading,
-    error: marketError,
-    refetch: refetchMarket,
   } = useMarketData(
     useMemo(
       () =>
@@ -157,15 +153,7 @@ function DashboardPage(): ReactElement {
       trackedPositions,
     };
   }, [investments, marketOverview]);
-  const goldCategoryIds = useMemo(
-    () =>
-      categories
-        .filter((category) =>
-          category.category_name.toLowerCase().includes("vàng"),
-        )
-        .map((category) => category.id),
-    [categories],
-  );
+
   const stockCategoryIds = useMemo(
     () =>
       categories
@@ -177,30 +165,7 @@ function DashboardPage(): ReactElement {
         .map((category) => category.id),
     [categories],
   );
-  const trackedGoldNames = useMemo(
-    () =>
-      new Set(
-        investments
-          .filter(
-            (investment) =>
-              investment.category_id &&
-              goldCategoryIds.includes(investment.category_id),
-          )
-          .map((investment) => investment.investment_name.toLowerCase()),
-      ),
-    [goldCategoryIds, investments],
-  );
-  const featuredGoldPrices = useMemo(
-    () =>
-      (marketOverview?.goldPrices ?? [])
-        .filter(
-          (item) =>
-            trackedGoldNames.size === 0 ||
-            trackedGoldNames.has(item.productName.toLowerCase()),
-        )
-        .slice(0, 5),
-    [marketOverview, trackedGoldNames],
-  );
+
   const stockInvestments = useMemo(
     () =>
       investments.filter(
@@ -247,21 +212,7 @@ function DashboardPage(): ReactElement {
         />
       </div>
 
-      <div className={styles.summaryRow}>
-        <SummaryCard
-          label="Giá vốn"
-          value={formatCurrency(
-            portfolioStats.totalCostBasis || totalAmount,
-            currency,
-          )}
-          icon={<RiseOutlined />}
-        />
-        <SummaryCard
-          label="Lãi/Lỗ tạm tính"
-          value={formatCurrency(portfolioStats.totalProfitLoss, currency)}
-          icon={<TrophyOutlined />}
-        />
-      </div>
+
 
       {!hasData && (
         <div className={`glass-card ${styles.emptyState}`}>
@@ -358,8 +309,7 @@ function DashboardPage(): ReactElement {
             ))}
             {stockQuotes.length === 0 && (
               <div className={styles.marketEmpty}>
-                Chưa tách được mã cổ phiếu từ tên khoản đầu tư, hoặc nguồn giá
-                đang không phản hồi.
+                Thêm mã tài sản (VD: FPT, VCB) khi tạo khoản đầu tư để theo dõi giá realtime.
               </div>
             )}
           </div>
@@ -379,8 +329,13 @@ function DashboardPage(): ReactElement {
               <div key={position.id} className={styles.positionRow}>
                 <div>
                   <div className={styles.marketName}>
-                    {position.investmentName}{" "}
-                    {position.tickerSymbol ? `(${position.tickerSymbol})` : ""}
+                    {position.investmentName}
+                    {position.tickerSymbol &&
+                      !position.investmentName
+                        .toUpperCase()
+                        .includes(position.tickerSymbol.toUpperCase())
+                      ? ` (${position.tickerSymbol})`
+                      : ""}
                   </div>
                   <div className={styles.marketMeta}>
                     Giá vốn:{" "}
